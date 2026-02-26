@@ -1,0 +1,227 @@
+{
+  "info": {
+    "_postman_id": "4f2d1f4f-826d-4e0c-8f26-5d174e7f95b9",
+    "name": "ArchAI API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET /",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            ""
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Has message and version', function () {",
+              "  pm.expect(jsonData).to.have.property('message', 'Welcome to ArchAI BOM API');",
+              "  pm.expect(jsonData).to.have.property('version');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Has status ok and version', function () {",
+              "  pm.expect(jsonData).to.have.property('status', 'ok');",
+              "  pm.expect(jsonData).to.have.property('version');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "POST /api/v1/ingest",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": []
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/ingest",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "ingest"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200 or 400', function () {",
+              "  pm.expect([200, 400]).to.include(pm.response.code);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "  var jsonData = pm.response.json();",
+              "  pm.test('Has wall_segments and total_wall_count', function () {",
+              "    pm.expect(jsonData).to.have.property('wall_segments');",
+              "    pm.expect(jsonData).to.have.property('total_wall_count');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /api/pdf/status/:pdf_id",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/pdf/status/:pdf_id",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "pdf",
+            "status",
+            ":pdf_id"
+          ],
+          "variable": [
+            {
+              "key": "pdf_id",
+              "value": "123"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Has pdf_id and status placeholder', function () {",
+              "  pm.expect(jsonData).to.have.property('pdf_id', '123');",
+              "  pm.expect(jsonData).to.have.property('status', 'placeholder');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "POST /api/v1/generate",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"spatial_graph\": {\n    \"walls\": [\n      {\"x1\": 0, \"y1\": 0, \"x2\": 20000, \"y2\": 0, \"length_pts\": 20000, \"thickness\": 2.0},\n      {\"x1\": 20000, \"y1\": 0, \"x2\": 20000, \"y2\": 10000, \"length_pts\": 10000, \"thickness\": 2.0},\n      {\"x1\": 20000, \"y1\": 10000, \"x2\": 0, \"y2\": 10000, \"length_pts\": 20000, \"thickness\": 2.0},\n      {\"x1\": 0, \"y1\": 10000, \"x2\": 0, \"y2\": 0, \"length_pts\": 10000, \"thickness\": 2.0}\n    ],\n    \"rooms\": [\n      {\n        \"name\": \"Main Hall\",\n        \"boundary_walls\": [0, 1, 2, 3],\n        \"area_sq_pts\": 200000000,\n        \"area_sq_ft\": 2152.78\n      }\n    ],\n    \"scale_factor\": 1.0,\n    \"page_dimensions\": [20000, 10000]\n  },\n  \"prompt\": \"Modern open-plan office with 4 private offices, 1 conference room, reception area, and pantry\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/generate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "generate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200 or 422', function () {",
+              "  pm.expect([200, 422]).to.include(pm.response.code);",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.test('Has top-level response fields', function () {",
+              "  pm.expect(jsonData).to.have.property('success');",
+              "  pm.expect(jsonData).to.have.property('iterations_used');",
+              "  pm.expect(jsonData).to.have.property('layout');",
+              "  pm.expect(jsonData).to.have.property('constraint_result');",
+              "});",
+              "",
+              "if (jsonData.layout) {",
+              "  var rooms = jsonData.layout.rooms || [];",
+              "  var walls = jsonData.layout.interior_walls || [];",
+              "  var doors = jsonData.layout.doors || [];",
+              "  var fixtures = jsonData.layout.fixtures || [];",
+              "  console.log('Iterations used:', jsonData.iterations_used);",
+              "  console.log('Rooms generated:', rooms.map(function (r) { return r.name + ' (' + r.room_type + ', ' + r.area_sqm + ' sqm)'; }));",
+              "  console.log('Interior walls count:', walls.length);",
+              "  console.log('Doors count:', doors.length);",
+              "  console.log('Fixtures count:', fixtures.length);",
+              "  console.log('Constraint summary:', jsonData.constraint_result.summary);",
+              "}",
+              "",
+              "pm.environment.set('lastIterationsUsed', String(jsonData.iterations_used));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

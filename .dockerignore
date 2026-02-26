@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Testing and linting
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Git and project artifacts
+.git/
+.gitignore
+.dockerignore
+Dockerfile
+.gsd/
+.agent/
+.gemini/
+
+# Documentation and project guidelines
+docs/
+README.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+PROJECT_RULES.md
+GSD-STYLE.md
+
+# Non-essential code
+tests/
+scripts/
+postman/
+sample_images/
+sample_pdfs/

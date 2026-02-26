@@ -82,25 +82,3 @@ v1 is done when a real contractor uses it on a live bid and reports measurable t
 | 2 | Spatial Generation | Spatial graph + prompt → 2D layout |
 | 3 | Deterministic Calculator | Geometry → priced BOM spreadsheet |
 | 4 | Client Dashboard | End-to-end UI + correction capture |
-
-See [`.gsd/ROADMAP.md`](.gsd/ROADMAP.md) for detailed phase plans.
-
----
-
-## Project Documentation
-
-| File | Purpose |
-|------|---------|
-| [`.gsd/SPEC.md`](.gsd/SPEC.md) | Full project specification — vision, goals, constraints, success criteria |
-| [`.gsd/ROADMAP.md`](.gsd/ROADMAP.md) | Phase structure and progress tracking |
-| [`.gsd/RESEARCH.md`](.gsd/RESEARCH.md) | Open tech questions — stack, vision models, competitive landscape |
-| [`.gsd/DECISIONS.md`](.gsd/DECISIONS.md) | Architecture Decision Records |
-| [`.gsd/STATE.md`](.gsd/STATE.md) | Current project state and session memory |
-
----
-
-## Stack
-
-TBD — pending research on computer vision model capabilities, spatial generation approach, and compute cost tradeoffs. See [`.gsd/RESEARCH.md`](.gsd/RESEARCH.md).
-
-**Next step:** Run `/plan 1` after stack selection to begin Phase 1 execution.

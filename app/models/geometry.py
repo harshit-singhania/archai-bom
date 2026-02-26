@@ -71,7 +71,8 @@ class WallSegment(BaseModel):
 
 
 class WallDetectionResult(BaseModel):
-    """Result of wall detection from extracted vectors."""
+    """Result of wall detection from extracted vectors or raster vision."""
     wall_segments: List[WallSegment] = Field(default_factory=list, description="List of detected wall segments")
     total_wall_count: int = Field(default=0, description="Total number of walls detected")
     total_linear_pts: float = Field(default=0.0, description="Total linear points of all walls")
+    source: str = Field(default="vector", description="Extraction source: 'vector' or 'raster'")

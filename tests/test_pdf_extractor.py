@@ -9,6 +9,39 @@ from app.services.pdf_extractor import extract_vectors, extract_summary
 from app.models.geometry import VectorLine, ExtractionResult
 
 
+# Discover all PDFs in sample_pdfs/
+SAMPLE_PDFS_DIR = os.path.join(os.path.dirname(__file__), "..", "sample_pdfs")
+ALL_PDF_PATHS = [
+    os.path.join(SAMPLE_PDFS_DIR, f) for f in os.listdir(SAMPLE_PDFS_DIR)
+    if f.endswith(".pdf") and os.path.isfile(os.path.join(SAMPLE_PDFS_DIR, f))
+]
+ALL_PDF_NAMES = [os.path.basename(p) for p in ALL_PDF_PATHS]
+
+# Categorize PDFs by type
+def categorize_pdf(pdf_path):
+    """Check if PDF has vector drawings or raster images."""
+    try:
+        doc = fitz.open(pdf_path)
+        page = doc[0]
+        has_drawings = len(page.get_drawings()) > 0
+        has_images = len(page.get_images()) > 0
+        doc.close()
+        
+        if has_drawings:
+            return "vector"
+        elif has_images:
+            return "raster"
+        else:
+            return "empty"
+    except Exception:
+        return "error"
+
+VECTOR_PDF_PATHS = [p for p in ALL_PDF_PATHS if categorize_pdf(p) == "vector"]
+RASTER_PDF_PATHS = [p for p in ALL_PDF_PATHS if categorize_pdf(p) == "raster"]
+VECTOR_PDF_NAMES = [os.path.basename(p) for p in VECTOR_PDF_PATHS]
+RASTER_PDF_NAMES = [os.path.basename(p) for p in RASTER_PDF_PATHS]
+
+
 class TestExtractVectors:
     """Tests for the extract_vectors function."""
     
@@ -203,3 +236,186 @@ class TestExtractSummary:
         
         assert summary["total_lines"] > 0
         assert len(summary["page_dimensions"]) == 2
+
+
+# =============================================================================
+# VECTOR FLOORPLAN PDF TESTS
+# =============================================================================
+
+@pytest.mark.skipif(not VECTOR_PDF_PATHS, reason="No vector PDFs found")
+class TestVectorFloorplanPDFs:
+    """Tests using vector-based floorplan PDFs (have drawings)."""
+    
+    @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
+    def test_extract_vectors_vector_pdf(self, pdf_path):
+        """Test that extract_vectors works on vector floorplan PDFs."""
+        result = extract_vectors(pdf_path)
+        
+        assert isinstance(result, ExtractionResult)
+        assert result.page_width > 0
+        assert result.page_height > 0
+        assert len(result.lines) > 0  # Vector PDFs should have lines
+    
+    @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
+    def test_extract_vectors_line_quality_vector_pdf(self, pdf_path):
+        """Test that extracted lines from vector PDFs have valid properties."""
+        result = extract_vectors(pdf_path)
+        
+        for line in result.lines:
+            # All coordinates should be finite numbers
+            assert isinstance(line.x1, (int, float))
+            assert isinstance(line.y1, (int, float))
+            assert isinstance(line.x2, (int, float))
+            assert isinstance(line.y2, (int, float))
+            assert not (line.x1 != line.x1)  # Check for NaN
+            assert not (line.y1 != line.y1)
+            assert not (line.x2 != line.x2)
+            assert not (line.y2 != line.y2)
+            
+            # Width should be non-negative
+            assert line.width >= 0
+    
+    @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
+    def test_extract_summary_vector_pdf(self, pdf_path):
+        """Test extract_summary on vector floorplan PDFs."""
+        summary = extract_summary(pdf_path)
+        
+        assert summary["total_lines"] > 0
+        assert len(summary["page_dimensions"]) == 2
+        assert summary["page_dimensions"][0] > 0  # width
+        assert summary["page_dimensions"][1] > 0  # height
+        
+        # Should have some line widths detected
+        assert len(summary["unique_line_widths"]) > 0
+        assert summary["width_count"] > 0
+    
+    @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
+    def test_bounding_box_vector_pdf(self, pdf_path):
+        """Test bounding box calculation on vector floorplan PDFs."""
+        result = extract_vectors(pdf_path)
+        bbox = result.get_bounding_box()
+        
+        assert bbox is not None
+        x1, y1, x2, y2 = bbox
+        
+        # Bounding box should be within page bounds
+        assert x1 >= 0
+        assert y1 >= 0
+        assert x2 <= result.page_width
+        assert y2 <= result.page_height
+        
+        # Bounding box should have positive dimensions
+        assert x2 > x1
+        assert y2 > y1
+    
+    def test_all_vector_pdfs_have_vectors(self):
+        """Verify all vector PDFs contain extractable vector graphics."""
+        failed_pdfs = []
+        
+        for pdf_path in VECTOR_PDF_PATHS:
+            result = extract_vectors(pdf_path)
+            if len(result.lines) == 0:
+                failed_pdfs.append(os.path.basename(pdf_path))
+        
+        assert not failed_pdfs, f"Vector PDFs with no vectors: {failed_pdfs}"
+
+
+# =============================================================================
+# RASTER (SCANNED) PDF TESTS
+# =============================================================================
+
+@pytest.mark.skipif(not RASTER_PDF_PATHS, reason="No raster PDFs found")
+class TestRasterFloorplanPDFs:
+    """Tests using raster-based floorplan PDFs (images only, no vectors)."""
+    
+    @pytest.mark.parametrize("pdf_path", RASTER_PDF_PATHS, ids=RASTER_PDF_NAMES)
+    def test_extract_vectors_raster_pdf_returns_empty(self, pdf_path):
+        """Test that raster PDFs return empty extraction (no vectors)."""
+        result = extract_vectors(pdf_path)
+        
+        assert isinstance(result, ExtractionResult)
+        assert result.page_width > 0
+        assert result.page_height > 0
+        assert len(result.lines) == 0  # Raster PDFs have no vector lines
+    
+    @pytest.mark.parametrize("pdf_path", RASTER_PDF_PATHS, ids=RASTER_PDF_NAMES)
+    def test_extract_summary_raster_pdf(self, pdf_path):
+        """Test extract_summary on raster PDFs."""
+        summary = extract_summary(pdf_path)
+        
+        # Should have page dimensions but no lines
+        assert summary["total_lines"] == 0
+        assert len(summary["page_dimensions"]) == 2
+        assert summary["page_dimensions"][0] > 0
+        assert summary["page_dimensions"][1] > 0
+    
+    def test_all_raster_pdfs_are_scanned(self):
+        """Verify all raster PDFs have zero vectors (as expected)."""
+        vector_found = []
+        
+        for pdf_path in RASTER_PDF_PATHS:
+            result = extract_vectors(pdf_path)
+            if len(result.lines) > 0:
+                vector_found.append(os.path.basename(pdf_path))
+        
+        assert not vector_found, f"Raster PDFs unexpectedly had vectors: {vector_found}"
+    
+    def test_raster_pdf_page_dimensions(self):
+        """Test that all raster PDFs have valid page dimensions."""
+        for pdf_path in RASTER_PDF_PATHS:
+            result = extract_vectors(pdf_path)
+            
+            assert result.page_width > 0, f"Invalid width in {os.path.basename(pdf_path)}"
+            assert result.page_height > 0, f"Invalid height in {os.path.basename(pdf_path)}"
+    
+    def test_raster_pdf_summary_consistency(self):
+        """Test consistency of raster PDF summaries."""
+        summaries = []
+        
+        for pdf_path in RASTER_PDF_PATHS:
+            summary = extract_summary(pdf_path)
+            summaries.append({
+                "name": os.path.basename(pdf_path),
+                "lines": summary["total_lines"],
+                "width": summary["page_dimensions"][0],
+                "height": summary["page_dimensions"][1],
+            })
+        
+        # All should have 0 lines
+        for s in summaries:
+            assert s["lines"] == 0, f"{s['name']} should have 0 lines"
+        
+        # Log dimensions for debugging
+        print(f"\nRaster PDF dimensions:")
+        for s in summaries[:5]:  # Show first 5
+            print(f"  {s['name']}: {s['width']:.1f} x {s['height']:.1f}")
+        if len(summaries) > 5:
+            print(f"  ... and {len(summaries) - 5} more")
+
+
+# =============================================================================
+# PDF CATEGORIZATION TESTS
+# =============================================================================
+
+class TestPDFCategorization:
+    """Tests for PDF type categorization."""
+    
+    def test_at_least_one_vector_pdf_exists(self):
+        """Ensure we have at least one vector PDF for testing."""
+        assert len(VECTOR_PDF_PATHS) >= 1, "Need at least one vector PDF"
+    
+    def test_raster_pdfs_available(self):
+        """Ensure we have raster PDFs for testing."""
+        assert len(RASTER_PDF_PATHS) >= 1, "Need at least one raster PDF"
+    
+    def test_categorization_accuracy(self):
+        """Verify PDF categorization is accurate."""
+        for pdf_path in ALL_PDF_PATHS:
+            category = categorize_pdf(pdf_path)
+            assert category in ["vector", "raster", "empty", "error"]
+    
+    def test_all_pdfs_categorized(self):
+        """Verify all PDFs are categorized."""
+        total_categorized = len(VECTOR_PDF_PATHS) + len(RASTER_PDF_PATHS)
+        assert total_categorized == len(ALL_PDF_PATHS), \
+            f"Mismatch: {total_categorized} categorized vs {len(ALL_PDF_PATHS)} total"

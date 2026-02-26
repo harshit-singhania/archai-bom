@@ -1,12 +1,17 @@
-.agent/ 
-.gemini/ 
-.gsd/ 
-adapters/ 
-docs/ 
-scripts/ 
-GSD-STYLE.md 
-model_capabilities.yaml 
-PROJECT_RULES.md 
+.agent/
+.gemini/
+.gsd/
+adapters/
+docs/
+scripts/
+GSD-STYLE.md
+model_capabilities.yaml
+PROJECT_RULES.md
 
 __pycache__
-.env 
+.env
+.vscode
+
+.pytest_cache
+.ruff_cache
+.DS_Store
