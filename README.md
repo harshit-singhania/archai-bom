@@ -1,6 +1,5 @@
 # ArchAI 🏗️🤖
 
-[![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](https://mariadb.com/bsl11/)
 [![Status: MVP In Progress](https://img.shields.io/badge/Status-MVP%20In%20Progress-orange.svg)]()
 
 **Floorplan-to-BOM: The End of Manual Construction Estimating.**
@@ -59,18 +58,6 @@ Our moat is **proprietary layout-to-cost datasets**. Every time a contractor adj
 
 ---
 
-## 💻 Local Development Setup (Coming Soon)
-
-```bash
-# Clone the repository
-# Run using Docker 
-# Access the application at http://localhost:3000
-
-```bash
-git clone https://github.com/your-org/spatial-pipeline.git
-docker-compose up --build
-```
-
 ## License and Copyright
 
 **Copyright (c) 2026 Harshit Singhania. All Rights Reserved.**
@@ -81,6 +68,8 @@ No license is granted to use, modify, distribute, or run this software, whether 
 
 If you are interested in a commercial partnership or enterprise licensing, please reach out directly.
 
-Email: [harshitsinghania917@gmail.com](mailto:harshitsinghania917@gmail.com)
-LinkedIn: [https://linkedin.com/in/h-singhania](https://linkedin.com/in/h-singhania)
-GitHub: [https://github.com/harshit-singhania](https://github.com/harshit-singhania)
+## Contact
+
+[![Gmail](https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:harshitsinghania917@gmail.com)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/h-singhania)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/harshit-singhania)
