@@ -6,6 +6,12 @@
 
 ---
 
+## Repository
+
+[https://github.com/harshit-singhania/achai-bom](https://github.com/harshit-singhania/achai-bom)
+
+---
+
 ## The Problem
 
 India's commercial interior fit-out market is exploding, driven by massive corporate expansions — but the way contractors bid on projects is trapped in the dark ages.
