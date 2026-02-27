@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "*"  # Comma-separated list of allowed CORS origins
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024  # 16MB max upload size
 
+    # Database Settings
+    DATABASE_URL: str = ""  # Optional: override Supabase connection
+
     class Config:
         env_file = ".env"
         case_sensitive = True
