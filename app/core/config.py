@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     GENERATION_PARALLEL_CANDIDATES: int = 2
     GENERATION_MAX_WORKERS: int = 4
 
+    # Security Settings
+    API_AUTH_KEY: str = ""  # Required for API access in production
+    ALLOWED_ORIGINS: str = "*"  # Comma-separated list of allowed CORS origins
+    MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024  # 16MB max upload size
+
     class Config:
         env_file = ".env"
         case_sensitive = True
