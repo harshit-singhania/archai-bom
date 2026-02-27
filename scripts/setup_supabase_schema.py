@@ -162,13 +162,16 @@ def create_sample_project(session: Session):
     session.add(project)
     session.commit()
     session.refresh(project)
-    print(f"✅ Created project: {project.project_name} (ID: {project.id})")
 
-    assert project.id is not None
+    project_id = project.id
+    if project_id is None:
+        raise RuntimeError("Failed to generate project ID")
+
+    print(f"✅ Created project: {project.project_name} (ID: {project_id})")
 
     # Create floorplan
     floorplan = Floorplan(
-        project_id=project.id,
+        project_id=project_id,
         pdf_storage_url="https://mfhglyvspxbmguilkdwx.supabase.co/storage/v1/object/public/floorplans/sample-office.pdf",
         raw_vector_data={
             "lines": 127,
@@ -182,13 +185,16 @@ def create_sample_project(session: Session):
     session.add(floorplan)
     session.commit()
     session.refresh(floorplan)
-    print(f"✅ Created floorplan (ID: {floorplan.id})")
 
-    assert floorplan.id is not None
+    floorplan_id = floorplan.id
+    if floorplan_id is None:
+        raise RuntimeError("Failed to generate floorplan ID")
+
+    print(f"✅ Created floorplan (ID: {floorplan_id})")
 
     # Create BOM
     bom = GeneratedBOM(
-        floorplan_id=floorplan.id,
+        floorplan_id=floorplan_id,
         total_cost_inr=1250000.0,
         bom_data={
             "generated_at": datetime.utcnow().isoformat(),
