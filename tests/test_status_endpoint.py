@@ -1,36 +1,23 @@
 """Contract tests for GET /api/v1/status/<pdf_id> endpoint."""
 
 import pytest
-from sqlmodel import create_engine, SQLModel
 from unittest.mock import patch
 
 from app.core import database as db_module
 from app.main import app
-from app.services.floorplan_repository import create_floorplan, update_floorplan_status, update_floorplan_error
+from app.services.floorplan_repository import (
+    create_floorplan,
+    update_floorplan_status,
+    update_floorplan_error,
+)
 from app.services.bom_repository import create_bom
+
+# test_db fixture is provided by tests/conftest.py (Supabase-backed)
 
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def test_db():
-    """In-memory SQLite database isolated per test."""
-    original_engine = db_module._engine
-    original_session_maker = db_module._session_maker
-
-    test_engine = create_engine("sqlite:///:memory:", echo=False)
-    SQLModel.metadata.create_all(test_engine)
-
-    db_module._engine = test_engine
-    db_module._session_maker = None
-
-    yield test_engine
-
-    db_module._engine = original_engine
-    db_module._session_maker = original_session_maker
 
 
 @pytest.fixture
@@ -184,7 +171,14 @@ def test_status_response_has_required_fields(client, test_db):
     assert response.status_code == 200
     data = response.get_json()
 
-    required_fields = {"pdf_id", "status", "created_at", "updated_at", "error_message", "generation_summary"}
+    required_fields = {
+        "pdf_id",
+        "status",
+        "created_at",
+        "updated_at",
+        "error_message",
+        "generation_summary",
+    }
     for field in required_fields:
         assert field in data, f"Missing required field: {field}"
 
@@ -194,7 +188,9 @@ def test_status_valid_status_values(client, test_db):
     valid_statuses = ["uploaded", "processing", "processed", "error"]
 
     for status_value in valid_statuses:
-        floorplan_id = create_floorplan(pdf_storage_url=f"test_{status_value}.pdf", status=status_value)
+        floorplan_id = create_floorplan(
+            pdf_storage_url=f"test_{status_value}.pdf", status=status_value
+        )
         response = client.get(f"/api/v1/status/{floorplan_id}")
 
         assert response.status_code == 200

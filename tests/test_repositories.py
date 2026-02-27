@@ -1,31 +1,11 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from sqlmodel import Session, create_engine, SQLModel
+from sqlmodel import Session
 
 from app.core import database as db_module
 from app.models.database import Project, Floorplan, GeneratedBOM
 
-
-@pytest.fixture
-def test_db():
-    """Create an in-memory SQLite database for testing."""
-    # Store original engine
-    original_engine = db_module._engine
-    original_session_maker = db_module._session_maker
-
-    # Create in-memory test database
-    test_engine = create_engine("sqlite:///:memory:", echo=False)
-    SQLModel.metadata.create_all(test_engine)
-
-    # Override the module's engine
-    db_module._engine = test_engine
-    db_module._session_maker = None
-
-    yield test_engine
-
-    # Restore original engine
-    db_module._engine = original_engine
-    db_module._session_maker = original_session_maker
+# test_db fixture is provided by tests/conftest.py (Supabase-backed)
 
 
 def test_session_factory_uses_test_database(test_db, monkeypatch):

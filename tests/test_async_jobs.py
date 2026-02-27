@@ -11,7 +11,6 @@ import os
 import tempfile
 import pytest
 from unittest.mock import patch, MagicMock
-from sqlmodel import create_engine, SQLModel
 
 from app.core import database as db_module
 from app.main import app
@@ -26,28 +25,12 @@ from app.services.job_repository import (
     VALID_STATUSES,
 )
 
+# test_db fixture is provided by tests/conftest.py (Supabase-backed)
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def test_db():
-    """In-memory SQLite database isolated per test."""
-    original_engine = db_module._engine
-    original_session_maker = db_module._session_maker
-
-    test_engine = create_engine("sqlite:///:memory:", echo=False)
-    SQLModel.metadata.create_all(test_engine)
-
-    db_module._engine = test_engine
-    db_module._session_maker = None
-
-    yield test_engine
-
-    db_module._engine = original_engine
-    db_module._session_maker = original_session_maker
 
 
 @pytest.fixture
@@ -82,10 +65,13 @@ class TestJobRepositoryLifecycle:
     def test_create_job_with_payload_and_floorplan(self, test_db):
         """Payload and floorplan_id are stored and retrievable."""
         from app.services.floorplan_repository import create_floorplan
+
         floorplan_id = create_floorplan(pdf_storage_url="sample.pdf", status="uploaded")
 
         payload = json.dumps({"pdf_path": "/tmp/sample.pdf"})
-        job_id = create_job(job_type="ingest", payload=payload, floorplan_id=floorplan_id)
+        job_id = create_job(
+            job_type="ingest", payload=payload, floorplan_id=floorplan_id
+        )
 
         job = get_job_by_id(job_id)
         assert job["job_type"] == "ingest"
@@ -162,6 +148,7 @@ class TestJobRepositoryLifecycle:
     def test_list_jobs_by_floorplan(self, test_db):
         """list_jobs_by_floorplan returns all jobs for a floorplan."""
         from app.services.floorplan_repository import create_floorplan
+
         fp_id = create_floorplan(pdf_storage_url="multi.pdf", status="uploaded")
 
         job_id_1 = create_job(job_type="ingest", floorplan_id=fp_id)
@@ -184,9 +171,17 @@ class TestJobRepositoryLifecycle:
         job = get_job_by_id(job_id)
 
         required = {
-            "id", "job_type", "status", "floorplan_id", "payload",
-            "error_message", "result_ref", "created_at", "updated_at",
-            "started_at", "finished_at",
+            "id",
+            "job_type",
+            "status",
+            "floorplan_id",
+            "payload",
+            "error_message",
+            "result_ref",
+            "created_at",
+            "updated_at",
+            "started_at",
+            "finished_at",
         }
         for field in required:
             assert field in job, f"Missing field: {field}"
@@ -202,7 +197,9 @@ class TestJobRepositoryLifecycle:
         job = get_job_by_id(job_id)
         assert job["status"] == "running"
 
-        mark_job_succeeded(job_id, result_ref={"result_type": "floorplan", "result_id": 7})
+        mark_job_succeeded(
+            job_id, result_ref={"result_type": "floorplan", "result_id": 7}
+        )
         job = get_job_by_id(job_id)
         assert job["status"] == "succeeded"
 
@@ -232,9 +229,15 @@ class TestWorkerExecutesAndPersistsResults:
         from app.services.floorplan_repository import create_floorplan
 
         # Create a realistic temp PDF substitute (empty file for mock path)
-        floorplan_id = create_floorplan(pdf_storage_url="runner_test.pdf", status="uploaded")
-        payload = json.dumps({"pdf_path": "/tmp/fake.pdf", "floorplan_id": floorplan_id})
-        job_id = create_job(job_type="ingest", payload=payload, floorplan_id=floorplan_id)
+        floorplan_id = create_floorplan(
+            pdf_storage_url="runner_test.pdf", status="uploaded"
+        )
+        payload = json.dumps(
+            {"pdf_path": "/tmp/fake.pdf", "floorplan_id": floorplan_id}
+        )
+        job_id = create_job(
+            job_type="ingest", payload=payload, floorplan_id=floorplan_id
+        )
 
         # Mock the ingestion pipeline so we don't need a real PDF
         mock_result = MagicMock()
@@ -259,11 +262,17 @@ class TestWorkerExecutesAndPersistsResults:
         from app.services.job_runner import run_job
         from app.services.floorplan_repository import create_floorplan
 
-        floorplan_id = create_floorplan(pdf_storage_url="fail_test.pdf", status="uploaded")
+        floorplan_id = create_floorplan(
+            pdf_storage_url="fail_test.pdf", status="uploaded"
+        )
         payload = json.dumps({"pdf_path": "/tmp/bad.pdf", "floorplan_id": floorplan_id})
-        job_id = create_job(job_type="ingest", payload=payload, floorplan_id=floorplan_id)
+        job_id = create_job(
+            job_type="ingest", payload=payload, floorplan_id=floorplan_id
+        )
 
-        with patch("app.services.job_runner.ingest_pdf", side_effect=RuntimeError("No API key")):
+        with patch(
+            "app.services.job_runner.ingest_pdf", side_effect=RuntimeError("No API key")
+        ):
             with patch("app.services.job_runner.update_floorplan_error"):
                 run_job(job_id)
 
@@ -276,9 +285,13 @@ class TestWorkerExecutesAndPersistsResults:
         from app.services.job_runner import run_job
         from app.services.floorplan_repository import create_floorplan
 
-        floorplan_id = create_floorplan(pdf_storage_url="running_test.pdf", status="uploaded")
+        floorplan_id = create_floorplan(
+            pdf_storage_url="running_test.pdf", status="uploaded"
+        )
         payload = json.dumps({"pdf_path": "/tmp/x.pdf", "floorplan_id": floorplan_id})
-        job_id = create_job(job_type="ingest", payload=payload, floorplan_id=floorplan_id)
+        job_id = create_job(
+            job_type="ingest", payload=payload, floorplan_id=floorplan_id
+        )
 
         seen_statuses = []
 
@@ -332,6 +345,7 @@ class TestAPIEnqueueAndPoll:
 
         # Build a proper multipart form upload
         import io
+
         pdf_io = io.BytesIO(b"%PDF-1.4\n1 0 obj\n<</Type /Catalog>>\nendobj\n%%EOF")
         pdf_io.name = "test.pdf"
 
@@ -363,12 +377,15 @@ class TestAPIEnqueueAndPoll:
 
     def test_ingest_400_when_no_file(self, client, test_db):
         """POST /api/v1/ingest returns 400 when no file is provided."""
-        response = client.post("/api/v1/ingest", data={}, content_type="multipart/form-data")
+        response = client.post(
+            "/api/v1/ingest", data={}, content_type="multipart/form-data"
+        )
         assert response.status_code == 400
 
     def test_ingest_400_when_not_pdf(self, client, test_db):
         """POST /api/v1/ingest returns 400 for non-PDF file."""
         import io
+
         txt_io = io.BytesIO(b"not a pdf")
         response = client.post(
             "/api/v1/ingest",
@@ -380,7 +397,10 @@ class TestAPIEnqueueAndPoll:
     def test_status_endpoint_reflects_queued_job(self, client, test_db):
         """GET /api/v1/status/<pdf_id> returns job status when job exists."""
         from app.services.floorplan_repository import create_floorplan
-        floorplan_id = create_floorplan(pdf_storage_url="status_test.pdf", status="uploaded")
+
+        floorplan_id = create_floorplan(
+            pdf_storage_url="status_test.pdf", status="uploaded"
+        )
         job_id = create_job(job_type="ingest", floorplan_id=floorplan_id)
 
         response = client.get(f"/api/v1/status/{floorplan_id}")
@@ -434,8 +454,12 @@ class TestAPIEnqueueAndPoll:
             "rooms": [],
             "walls": [
                 {
-                    "x1": 0.0, "y1": 0.0, "x2": 10.0, "y2": 0.0,
-                    "length_pts": 10.0, "thickness": 5.0,
+                    "x1": 0.0,
+                    "y1": 0.0,
+                    "x2": 10.0,
+                    "y2": 0.0,
+                    "length_pts": 10.0,
+                    "thickness": 5.0,
                 }
             ],
             "scale_factor": None,

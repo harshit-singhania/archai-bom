@@ -1,16 +1,66 @@
 """
-Shared test configuration and fixtures for PDF-based tests.
+Shared test configuration and fixtures.
 
-Provides lazy PDF discovery helpers and fixtures that are safe when
-sample_pdfs/ directories are missing or empty. No filesystem scanning
-occurs at import time — all discovery is deferred to fixture execution
-or explicit helper calls.
+Provides:
+- Shared ``test_db`` fixture backed by real Supabase/PostgreSQL.
+  Tests that write to the DB must request this fixture; it truncates
+  all application tables after each test so tests are fully isolated
+  without spinning up a separate database engine.
+- Lazy PDF discovery helpers and fixtures that are safe when
+  sample_pdfs/ directories are missing or empty. No filesystem scanning
+  occurs at import time — all discovery is deferred to fixture execution
+  or explicit helper calls.
 """
 
 from __future__ import annotations
 
 import os
 import pytest
+from sqlalchemy import text
+from sqlmodel import SQLModel
+
+import app.models.database  # noqa: F401 — registers all SQLModel tables
+from app.core import database as db_module
+
+
+# ---------------------------------------------------------------------------
+# Shared Supabase test_db fixture
+# ---------------------------------------------------------------------------
+
+# Tables in safe TRUNCATE order (children before parents to respect FKs).
+_TRUNCATE_ORDER = [
+    "async_jobs",
+    "generated_boms",
+    "floorplans",
+    "projects",
+]
+
+
+@pytest.fixture
+def test_db():
+    """Supabase-backed test fixture — truncates application tables after each test.
+
+    Ensures the real Supabase schema exists (idempotent) and cleans up
+    rows written during the test so tests don't interfere with each other.
+    Use this fixture in any test that reads from or writes to the database.
+    """
+    engine = db_module.get_engine()
+
+    # Ensure schema is up-to-date (no-op when tables already exist).
+    SQLModel.metadata.create_all(engine)
+
+    # Reset the session maker so it binds fresh at the start of each test.
+    db_module._session_maker = None
+
+    yield engine
+
+    # Reset session maker so no stale session leaks into the next test.
+    db_module._session_maker = None
+
+    # Truncate in FK-safe order after each test.
+    with engine.begin() as conn:
+        for table in _TRUNCATE_ORDER:
+            conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +103,7 @@ def _list_pdfs_flat(directory: str) -> list[str]:
 # Shared PDF categorization helper
 # ---------------------------------------------------------------------------
 
+
 def categorize_pdf(pdf_path: str) -> str:
     """
     Classify a PDF as 'vector', 'raster', 'empty', or 'error'.
@@ -86,6 +137,7 @@ def categorize_pdf(pdf_path: str) -> str:
 # Lazy collection helpers
 # Call these from test modules instead of running os.listdir at import time.
 # ---------------------------------------------------------------------------
+
 
 def get_vector_pdf_paths() -> list[str]:
     """Return PDF paths from sample_pdfs/vector/ directory."""
@@ -131,6 +183,7 @@ def get_categorized_pdf_paths() -> tuple[list[str], list[str], list[str]]:
 # pytest fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def sample_pdfs_dir() -> str:
     """Return path to the sample_pdfs root directory."""
@@ -156,7 +209,9 @@ def all_pdf_paths() -> list[str]:
 
 
 @pytest.fixture(scope="session")
-def any_pdf_path(vector_pdf_paths: list[str], raster_pdf_paths: list[str]) -> str | None:
+def any_pdf_path(
+    vector_pdf_paths: list[str], raster_pdf_paths: list[str]
+) -> str | None:
     """Return the first available PDF path, or None if no PDFs found."""
     if vector_pdf_paths:
         return vector_pdf_paths[0]

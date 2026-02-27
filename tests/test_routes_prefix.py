@@ -12,7 +12,7 @@ def client():
         yield test_client
 
 
-def test_routes_use_api_v1_prefix(client, monkeypatch):
+def test_routes_use_api_v1_prefix(client, test_db, monkeypatch):
     """Test that routes are accessible under API_V1_PREFIX."""
     # Ensure we're using the default prefix
     assert settings.API_V1_PREFIX == "/api/v1"
@@ -27,9 +27,11 @@ def test_routes_use_api_v1_prefix(client, monkeypatch):
     # Should get 400 (no body) not 404 (route not found)
     assert response.status_code == 400
 
-    # Test that status route is accessible
-    response = client.get("/api/v1/status/123")
-    assert response.status_code == 200
+    # Test that status route is accessible — 404 (route found, record absent) not 500 or 404-from-routing
+    response = client.get("/api/v1/status/999999")
+    assert response.status_code == 404
+    data = response.get_json()
+    assert "error" in data  # route handled the request, returned proper JSON 404
 
 
 def test_routes_not_at_old_hardcoded_paths(client):
