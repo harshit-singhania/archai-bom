@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     # Database Settings
     DATABASE_URL: str = ""  # Optional: override Supabase connection
 
+    # Async queue settings (Redis-backed RQ)
+    REDIS_URL: str = "redis://localhost:6379/0"  # Redis connection string
+    JOB_QUEUE_NAME: str = "achai_jobs"  # RQ queue name
+    JOB_MAX_RETRIES: int = 3  # Max retry attempts for transient worker failures
+    JOB_RETRY_DELAY_SECONDS: int = 5  # Base delay between retries
+
     class Config:
         env_file = ".env"
         case_sensitive = True
