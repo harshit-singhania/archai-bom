@@ -13,7 +13,7 @@ from app.services.ingestion_pipeline import ingest_pdf
 api_bp = Blueprint("api", __name__)
 
 
-@api_bp.route("/v1/ingest", methods=["POST"])
+@api_bp.route("/ingest", methods=["POST"])
 def ingest_floorplan():
     """
     Ingest a PDF floorplan, extract vectors, and detect structural walls.
@@ -56,13 +56,13 @@ def ingest_floorplan():
         return jsonify({"error": f"Error handling file upload: {str(e)}"}), 500
 
 
-@api_bp.route("/pdf/status/<pdf_id>", methods=["GET"])
+@api_bp.route("/status/<pdf_id>", methods=["GET"])
 def get_pdf_status(pdf_id: str):
     """Get processing status of a PDF."""
     return jsonify({"pdf_id": pdf_id, "status": "placeholder"})
 
 
-@api_bp.route("/v1/generate", methods=["POST"])
+@api_bp.route("/generate", methods=["POST"])
 def generate_layout_endpoint():
     """Generate and validate an interior layout from SpatialGraph + prompt."""
 
