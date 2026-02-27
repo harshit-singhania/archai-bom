@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T11:01:20.437Z"
+last_updated: "2026-02-27T11:10:05.775Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -48,6 +48,7 @@ Progress: [▓▓▓▓▓▓▓▓░░] 80%
 
 *Updated after each plan completion*
 | Phase 01-concerns-remediation P04 | 8 | 2 tasks | 5 files |
+| Phase 01-concerns-remediation P06 | 4m | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Progress: [▓▓▓▓▓▓▓▓░░] 80%
 - [Phase 1 Plan 8]: Performance envelope set at 5s for 100 rooms/400 fixtures, 10s for 500 combined
 - [Phase 1 Plan 4]: Used subdirectory-based PDF discovery (sample_pdfs/vector/, sample_pdfs/raster/) in conftest; unified categorize_pdf() shared across four test modules
 - [Phase 01-concerns-remediation]: Used subdirectory-based PDF discovery in conftest; unified categorize_pdf() shared across four test modules
+- [Phase 01-concerns-remediation]: Repository get_* functions return typed dicts; update_* return bool for clean boundaries
+- [Phase 01-concerns-remediation]: SQLModel session engine override via _engine module var injection for test isolation (no DI)
 
 ### Pending Todos
 
@@ -75,5 +78,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Executed plan 04 (01-concerns-remediation)
+Stopped at: Completed plan 06 (01-concerns-remediation) — persistence layer with 24 passing tests
 Resume file: None

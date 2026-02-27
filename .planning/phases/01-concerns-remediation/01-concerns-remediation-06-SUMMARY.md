@@ -65,14 +65,22 @@ All repositories follow a consistent pattern:
 - `update_*()` returns `bool` (success indicator)
 
 ## Deviations from Plan
-- Changed return types from ORM objects to dicts to avoid SQLAlchemy session detachment issues
-- This provides cleaner API boundaries and better serialization support
+
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Duplicate function definitions in repository files**
+- **Found during:** Task 2 verification run
+- **Issue:** Repository files had duplicate function definitions — dict-returning version followed by ORM-returning version; Python kept only the last (ORM), causing 11 test failures where tests expected dict access
+- **Fix:** Removed duplicate definitions, settled on dict-returning `get_*` and `bool`-returning `update_*`, aligned test assertions to use subscript access consistently
+- **Files modified:** `app/services/floorplan_repository.py`, `app/services/bom_repository.py`, `tests/test_repositories.py`
+- **Commit:** `9121f08`
 
 ## Self-Check: PASSED
-- Database session infrastructure: FOUND
+- Database session infrastructure (`app/core/database.py`): FOUND
 - Repository modules for all entities: FOUND
 - Supabase client tests: 4 passed
 - Repository tests: 20 passed
+- Total: 24 passed, 0 failed (confirmed via pytest run)
 
 ## Files Created
 - `app/core/database.py` - Session management
