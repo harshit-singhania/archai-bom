@@ -4,31 +4,15 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 from app.main import app
+from tests.conftest import get_categorized_pdf_paths
 
 
-# Discover all PDFs in sample_pdfs/
-SAMPLE_PDFS_DIR = os.path.join(os.path.dirname(__file__), "..", "sample_pdfs")
-ALL_PDF_PATHS = [
-    os.path.join(SAMPLE_PDFS_DIR, f) for f in os.listdir(SAMPLE_PDFS_DIR)
-    if f.endswith(".pdf") and os.path.isfile(os.path.join(SAMPLE_PDFS_DIR, f))
-]
+# ---------------------------------------------------------------------------
+# Lazy PDF discovery — uses conftest helpers, safe when directories absent.
+# ---------------------------------------------------------------------------
+
+ALL_PDF_PATHS, VECTOR_PDF_PATHS, RASTER_PDF_PATHS = get_categorized_pdf_paths()
 ALL_PDF_NAMES = [os.path.basename(p) for p in ALL_PDF_PATHS]
-
-# Categorize PDFs by type
-def categorize_pdf(pdf_path):
-    """Check if PDF has vector drawings or raster images."""
-    import fitz
-    try:
-        doc = fitz.open(pdf_path)
-        page = doc[0]
-        has_drawings = len(page.get_drawings()) > 0
-        doc.close()
-        return "vector" if has_drawings else "raster"
-    except Exception:
-        return "error"
-
-VECTOR_PDF_PATHS = [p for p in ALL_PDF_PATHS if categorize_pdf(p) == "vector"]
-RASTER_PDF_PATHS = [p for p in ALL_PDF_PATHS if categorize_pdf(p) == "raster"]
 VECTOR_PDF_NAMES = [os.path.basename(p) for p in VECTOR_PDF_PATHS]
 RASTER_PDF_NAMES = [os.path.basename(p) for p in RASTER_PDF_PATHS]
 
@@ -61,29 +45,29 @@ def test_root_endpoint(client):
 
 def test_api_ingest_endpoint(client):
     """Test the /api/v1/ingest API endpoint with default test file."""
-    pdf_path = "sample_pdfs/test_floorplan.pdf"
-    
+    pdf_path = "sample_pdfs/vector/test_floorplan.pdf"
+
     if not os.path.exists(pdf_path):
         pytest.skip(f"{pdf_path} not found")
-        
+
     with open(pdf_path, "rb") as f:
         response = client.post(
             "/api/v1/ingest",
             data={"file": (f, "test_floorplan.pdf")},
             content_type="multipart/form-data"
         )
-        
+
     assert response.status_code == 200
     data = response.get_json()
     assert "total_wall_count" in data
     assert "wall_segments" in data
     assert data["total_wall_count"] > 0
-    
+
 
 def test_api_ingest_endpoint_invalid_file(client):
     """Test endpoint with non-PDF file."""
     import io
-    
+
     data = {
         "file": (io.BytesIO(b"dummy content"), "test_floorplan.txt")
     }
@@ -92,7 +76,7 @@ def test_api_ingest_endpoint_invalid_file(client):
         data=data,
         content_type="multipart/form-data"
     )
-    
+
     assert response.status_code == 400
     assert "must be a PDF" in response.get_json()["error"]
 
@@ -111,32 +95,32 @@ def test_api_ingest_endpoint_no_file(client):
 @pytest.mark.skipif(not VECTOR_PDF_PATHS, reason="No vector PDFs found")
 class TestVectorPDFIngestion:
     """Ingestion tests using vector-based PDFs."""
-    
+
     @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
     def test_ingest_vector_floorplan(self, client, pdf_path):
         """Test ingestion endpoint with each vector floorplan PDF."""
         pdf_name = os.path.basename(pdf_path)
-        
+
         with open(pdf_path, "rb") as f:
             response = client.post(
                 "/api/v1/ingest",
                 data={"file": (f, pdf_name)},
                 content_type="multipart/form-data"
             )
-        
+
         assert response.status_code == 200, f"Failed to ingest {pdf_name}: {response.get_json()}"
-        
+
         data = response.get_json()
-        
+
         # Verify response structure
         assert "total_wall_count" in data
         assert "total_linear_pts" in data
         assert "wall_segments" in data
-        
+
         # Vector floorplans should have walls
         assert data["total_wall_count"] > 0, f"No walls detected in {pdf_name}"
         assert len(data["wall_segments"]) > 0
-        
+
         # Verify wall segment structure
         for wall in data["wall_segments"]:
             assert "x1" in wall
@@ -145,21 +129,21 @@ class TestVectorPDFIngestion:
             assert "y2" in wall
             assert "length_pts" in wall
             assert "thickness" in wall
-    
+
     @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
     def test_ingest_vector_response_page_dimensions(self, client, pdf_path):
         """Test that page dimensions are returned correctly for vector PDFs."""
         pdf_name = os.path.basename(pdf_path)
-        
+
         with open(pdf_path, "rb") as f:
             response = client.post(
                 "/api/v1/ingest",
                 data={"file": (f, pdf_name)},
                 content_type="multipart/form-data"
             )
-        
+
         data = response.get_json()
-        
+
         # Verify wall segments have required fields
         assert len(data["wall_segments"]) > 0
         for wall in data["wall_segments"]:
@@ -167,15 +151,15 @@ class TestVectorPDFIngestion:
             assert "y1" in wall
             assert "x2" in wall
             assert "y2" in wall
-    
+
     def test_all_vector_floorplans_ingest_successfully(self, client):
         """Verify all vector PDFs can be ingested without errors."""
         failed_pdfs = []
         success_count = 0
-        
+
         for pdf_path in VECTOR_PDF_PATHS:
             pdf_name = os.path.basename(pdf_path)
-            
+
             try:
                 with open(pdf_path, "rb") as f:
                     response = client.post(
@@ -183,36 +167,36 @@ class TestVectorPDFIngestion:
                         data={"file": (f, pdf_name)},
                         content_type="multipart/form-data"
                     )
-                
+
                 if response.status_code != 200:
                     failed_pdfs.append((pdf_name, response.status_code, response.get_json()))
                 else:
                     success_count += 1
             except Exception as e:
                 failed_pdfs.append((pdf_name, "exception", str(e)))
-        
+
         if failed_pdfs:
             print(f"\nFailed vector PDFs:")
             for name, code, msg in failed_pdfs:
                 print(f"  {name}: {code} - {msg}")
-        
+
         assert not failed_pdfs, f"{len(failed_pdfs)} vector PDFs failed to ingest"
         assert success_count == len(VECTOR_PDF_PATHS)
-    
+
     def test_vector_wall_detection_consistency(self, client):
         """Test that wall detection is consistent across vector floorplans."""
         results = []
-        
+
         for pdf_path in VECTOR_PDF_PATHS:
             pdf_name = os.path.basename(pdf_path)
-            
+
             with open(pdf_path, "rb") as f:
                 response = client.post(
                     "/api/v1/ingest",
                     data={"file": (f, pdf_name)},
                     content_type="multipart/form-data"
                 )
-            
+
             if response.status_code == 200:
                 data = response.get_json()
                 results.append({
@@ -220,27 +204,27 @@ class TestVectorPDFIngestion:
                     "wall_count": data["total_wall_count"],
                     "linear_pts": data["total_linear_pts"],
                 })
-        
+
         # Verify we have results
         assert len(results) == len(VECTOR_PDF_PATHS)
-        
+
         # Sort by wall count for analysis
         results.sort(key=lambda x: x["wall_count"])
-        
+
         print(f"\nVector PDF Ingestion Results:")
         print(f"{'PDF Name':<20} {'Walls':>6} {'Linear Pts':>12}")
         print("-" * 45)
         for r in results:
             print(f"{r['name']:<20} {r['wall_count']:>6} {r['linear_pts']:>12.1f}")
-        
+
         # Basic sanity checks
         min_walls = results[0]["wall_count"]
         max_walls = results[-1]["wall_count"]
         avg_walls = sum(r["wall_count"] for r in results) / len(results)
-        
+
         assert max_walls >= min_walls
         assert avg_walls > 0
-        
+
         print(f"\nStatistics:")
         print(f"  Min walls: {min_walls}")
         print(f"  Max walls: {max_walls}")
@@ -356,17 +340,17 @@ class TestRasterPDFIngestion:
 
 class TestMixedPDFBatch:
     """Tests covering both vector and raster PDFs together."""
-    
+
     def test_pdf_categorization_complete(self):
         """Verify all PDFs are categorized."""
         total = len(VECTOR_PDF_PATHS) + len(RASTER_PDF_PATHS)
         assert total == len(ALL_PDF_PATHS), \
             f"PDF categorization incomplete: {total} categorized vs {len(ALL_PDF_PATHS)} total"
-    
+
     def test_at_least_one_vector_pdf(self):
         """Ensure we have at least one vector PDF for testing."""
         assert len(VECTOR_PDF_PATHS) >= 1, "Need at least one vector PDF"
-    
+
     def test_at_least_one_raster_pdf(self):
         """Ensure we have at least one raster PDF for testing."""
         assert len(RASTER_PDF_PATHS) >= 1, "Need at least one raster PDF"

@@ -1,6 +1,9 @@
 """Layout generation service using Google Gemini."""
 
 import json
+import logging
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Any
 
 from google import genai
@@ -10,6 +13,8 @@ from pydantic import ValidationError
 from app.core.config import settings
 from app.models.layout import GeneratedLayout
 from app.models.spatial import SpatialGraph
+
+logger = logging.getLogger(__name__)
 
 
 def _mm_per_pdf_point(scale_factor: float | None) -> float:
@@ -138,6 +143,88 @@ def _parse_layout_response(response: Any) -> GeneratedLayout:
     raise ValueError(f"Gemini response missing parsed/text payload: {response}")
 
 
+def _call_gemini_with_timeout(
+    client: Any,
+    generation_prompt: str,
+    timeout_seconds: float,
+) -> Any:
+    """Call Gemini generate_content with an enforced wall-clock timeout.
+
+    Uses a single-thread executor to enforce timeout so the SDK call
+    cannot block indefinitely.
+
+    Raises:
+        RuntimeError: If the call times out.
+        Exception: Re-raises any SDK exception as-is for retry classification.
+    """
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            client.models.generate_content,
+            model="gemini-2.5-flash",
+            contents=[generation_prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=GeneratedLayout.model_json_schema(),
+                temperature=0.2,
+            ),
+        )
+        try:
+            return future.result(timeout=timeout_seconds)
+        except FuturesTimeoutError as exc:
+            raise RuntimeError(
+                f"Gemini call timed out after {timeout_seconds}s"
+            ) from exc
+
+
+def _call_gemini_with_retry(
+    client: Any,
+    generation_prompt: str,
+    max_retries: int,
+    timeout_seconds: float,
+    base_delay: float,
+    max_delay: float,
+) -> Any:
+    """Call Gemini with exponential backoff retry for transient errors.
+
+    Permanent errors (ValueError) are not retried. Transient errors
+    (RuntimeError, OSError, ConnectionError, and similar) trigger backoff retry.
+
+    Raises:
+        RuntimeError: After all retries exhausted or on timeout.
+    """
+
+    last_exc: Exception | None = None
+    attempts = max_retries + 1  # initial attempt + retries
+
+    for attempt in range(1, attempts + 1):
+        try:
+            return _call_gemini_with_timeout(client, generation_prompt, timeout_seconds)
+        except RuntimeError as exc:
+            last_exc = exc
+            if attempt < attempts:
+                delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
+                logger.warning(
+                    "Gemini call attempt %d/%d failed (%s); retrying in %.1fs",
+                    attempt,
+                    attempts,
+                    exc,
+                    delay,
+                )
+                time.sleep(delay)
+            else:
+                logger.error(
+                    "Gemini call failed after %d attempts: %s", attempts, exc
+                )
+        except Exception as exc:
+            # Non-transient SDK exceptions — bubble up immediately
+            raise RuntimeError(f"Gemini layout generation failed: {exc}") from exc
+
+    raise RuntimeError(
+        f"Gemini layout generation failed after {attempts} attempts: {last_exc}"
+    ) from last_exc
+
+
 def generate_layout(spatial_graph: SpatialGraph, prompt: str) -> GeneratedLayout:
     """Generate an interior layout from a spatial graph and natural language prompt."""
 
@@ -158,17 +245,13 @@ def generate_layout(spatial_graph: SpatialGraph, prompt: str) -> GeneratedLayout
     )
 
     client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[generation_prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_json_schema=GeneratedLayout.model_json_schema(),
-                temperature=0.2,
-            ),
-        )
-    except Exception as exc:
-        raise RuntimeError(f"Gemini layout generation failed: {exc}") from exc
+    response = _call_gemini_with_retry(
+        client=client,
+        generation_prompt=generation_prompt,
+        max_retries=settings.GENERATION_MAX_RETRIES,
+        timeout_seconds=settings.GENERATION_TIMEOUT_SECONDS,
+        base_delay=settings.GENERATION_RETRY_BASE_DELAY,
+        max_delay=settings.GENERATION_RETRY_MAX_DELAY,
+    )
 
     return _parse_layout_response(response)

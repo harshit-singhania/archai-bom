@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from app.models.constraints import (
     ConstraintResult,
     ConstraintViolation,
@@ -10,7 +12,10 @@ from app.models.constraints import (
 from app.models.generation import GenerationResult
 from app.models.layout import GeneratedLayout
 from app.models.spatial import SpatialGraph
-from app.services.generation_pipeline import generate_validated_layout
+from app.services.generation_pipeline import (
+    _compute_adaptive_candidates,
+    generate_validated_layout,
+)
 
 
 def _spatial_graph() -> SpatialGraph:
@@ -71,6 +76,19 @@ def _constraint_result(passed: bool) -> ConstraintResult:
     )
     return ConstraintResult(
         passed=False, violations=[violation], summary="1 errors, 0 warnings"
+    )
+
+
+def _warning_only_constraint_result() -> ConstraintResult:
+    """ConstraintResult with only warnings (no blocking errors), failed=False."""
+    warning = ConstraintViolation(
+        type=ConstraintViolationType.ROOM_OVERLAP,
+        description="Fixture slightly outside room boundary.",
+        severity="warning",
+        affected_elements=["f_1"],
+    )
+    return ConstraintResult(
+        passed=False, violations=[warning], summary="0 errors, 1 warnings"
     )
 
 
@@ -202,3 +220,126 @@ def test_generate_validated_layout_parallel_candidates_selects_best(
     prompts = [call.args[1] for call in mock_generate_validate_candidate.call_args_list]
     assert any("CANDIDATE_VARIATION 1/2" in prompt for prompt in prompts)
     assert any("CANDIDATE_VARIATION 2/2" in prompt for prompt in prompts)
+
+
+# --- Adaptive candidate scheduling unit tests ---
+
+
+def test_compute_adaptive_candidates_serial_mode_always_returns_one():
+    """Serial mode (requested=1) should never adapt."""
+    result = _compute_adaptive_candidates(
+        requested_candidates=1,
+        prior_constraint_result=_constraint_result(passed=False),
+        prior_candidate_errors=2,
+        prior_total_candidates=3,
+        candidate_min=1,
+        candidate_max=4,
+    )
+    assert result == 1
+
+
+def test_compute_adaptive_candidates_reduces_on_provider_failures():
+    """If prior generation failures occurred, reduce candidate count."""
+    result = _compute_adaptive_candidates(
+        requested_candidates=3,
+        prior_constraint_result=_constraint_result(passed=False),
+        prior_candidate_errors=1,  # one failure
+        prior_total_candidates=3,
+        candidate_min=1,
+        candidate_max=4,
+    )
+    assert result == 2  # reduced by 1
+
+
+def test_compute_adaptive_candidates_increases_on_warnings_only():
+    """If best prior result had only warnings, increase candidate count."""
+    result = _compute_adaptive_candidates(
+        requested_candidates=2,
+        prior_constraint_result=_warning_only_constraint_result(),
+        prior_candidate_errors=0,
+        prior_total_candidates=2,
+        candidate_min=1,
+        candidate_max=4,
+    )
+    assert result == 3  # increased by 1
+
+
+def test_compute_adaptive_candidates_unchanged_on_blocking_errors():
+    """If best prior result had blocking errors (no provider failures), keep count."""
+    result = _compute_adaptive_candidates(
+        requested_candidates=2,
+        prior_constraint_result=_constraint_result(passed=False),  # has error violations
+        prior_candidate_errors=0,
+        prior_total_candidates=2,
+        candidate_min=1,
+        candidate_max=4,
+    )
+    assert result == 2  # unchanged
+
+
+def test_compute_adaptive_candidates_clamped_to_min():
+    """Candidate count should not drop below candidate_min."""
+    result = _compute_adaptive_candidates(
+        requested_candidates=2,
+        prior_constraint_result=_constraint_result(passed=False),
+        prior_candidate_errors=2,  # all failed
+        prior_total_candidates=2,
+        candidate_min=2,  # min is 2
+        candidate_max=4,
+    )
+    assert result == 2  # clamped at min
+
+
+def test_compute_adaptive_candidates_clamped_to_max():
+    """Candidate count should not exceed candidate_max."""
+    result = _compute_adaptive_candidates(
+        requested_candidates=4,
+        prior_constraint_result=_warning_only_constraint_result(),
+        prior_candidate_errors=0,
+        prior_total_candidates=4,
+        candidate_min=1,
+        candidate_max=4,  # max is 4
+    )
+    assert result == 4  # clamped at max
+
+
+def test_compute_adaptive_candidates_first_iteration_uses_requested():
+    """With no prior result, use requested value clamped to limits."""
+    result = _compute_adaptive_candidates(
+        requested_candidates=3,
+        prior_constraint_result=None,
+        prior_candidate_errors=0,
+        prior_total_candidates=0,
+        candidate_min=1,
+        candidate_max=4,
+    )
+    assert result == 3
+
+
+@patch("app.services.generation_pipeline._generate_validate_candidate")
+def test_generate_validated_layout_serial_mode_deterministic(mock_generate_validate_candidate):
+    """Serial mode (parallel_candidates=1) must stay at 1 regardless of results."""
+
+    call_counts = []
+
+    def side_effect(_spatial_graph, prompt):
+        call_counts.append(prompt)
+        # First iteration fails, second passes
+        if len(call_counts) == 1:
+            return _layout(), _constraint_result(passed=False)
+        return _layout(), _constraint_result(passed=True)
+
+    mock_generate_validate_candidate.side_effect = side_effect
+
+    result = generate_validated_layout(
+        spatial_graph=_spatial_graph(),
+        prompt="office",
+        parallel_candidates=1,
+        max_workers=1,
+        max_iterations=3,
+    )
+
+    assert result.success is True
+    assert result.iterations_used == 2
+    # Serial mode: no CANDIDATE_VARIATION hints in prompts
+    assert all("CANDIDATE_VARIATION" not in p for p in call_counts)

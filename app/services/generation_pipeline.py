@@ -2,7 +2,9 @@
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+import logging
 
+from app.core.config import settings
 from app.models.constraints import ConstraintResult
 from app.models.generation import GenerationResult
 from app.models.layout import GeneratedLayout
@@ -10,6 +12,8 @@ from app.models.spatial import SpatialGraph
 from app.services.constraint_checker import validate_layout
 from app.services.grid_snapper import snap_layout_to_grid
 from app.services.layout_generator import generate_layout
+
+logger = logging.getLogger(__name__)
 
 
 def _format_constraint_feedback(constraint_result: ConstraintResult) -> tuple[str, str]:
@@ -111,6 +115,67 @@ def _constraint_score(constraint_result: ConstraintResult) -> tuple[int, int]:
     return error_count, warning_count
 
 
+def _compute_adaptive_candidates(
+    requested_candidates: int,
+    prior_constraint_result: ConstraintResult | None,
+    prior_candidate_errors: int,
+    prior_total_candidates: int,
+    candidate_min: int,
+    candidate_max: int,
+) -> int:
+    """Adjust the number of parallel candidates for the next iteration.
+
+    Adaptation rules (applied only when parallel mode is active, i.e. requested > 1):
+
+    - If prior iteration had generation failures (provider errors) among candidates:
+      reduce by 1 to cut cost pressure on the provider.
+    - If prior iteration had only warnings (no blocking errors) from the best candidate:
+      increase by 1 to cast a wider net.
+    - Otherwise (blocking errors but no generation failures): keep current count.
+    - Always clamp result to [candidate_min, candidate_max].
+
+    When requested_candidates == 1 (serial mode), always return 1 — no adaptation.
+    """
+
+    if requested_candidates <= 1:
+        return 1
+
+    current = requested_candidates
+    if prior_constraint_result is None:
+        # First iteration — use requested value clamped to limits
+        return max(candidate_min, min(candidate_max, current))
+
+    prior_errors, prior_warnings = _constraint_score(prior_constraint_result)
+    failure_rate = (
+        prior_candidate_errors / prior_total_candidates
+        if prior_total_candidates > 0
+        else 0.0
+    )
+
+    if failure_rate > 0.0:
+        # Provider errors occurred — reduce candidates to lower cost pressure
+        adjusted = current - 1
+        logger.info(
+            "Adaptive fanout: reducing candidates from %d to %d (%.0f%% failure rate)",
+            current,
+            adjusted,
+            failure_rate * 100,
+        )
+    elif prior_errors == 0 and prior_warnings > 0:
+        # Only warnings — try more candidates to improve quality
+        adjusted = current + 1
+        logger.info(
+            "Adaptive fanout: increasing candidates from %d to %d (warnings only, no errors)",
+            current,
+            adjusted,
+        )
+    else:
+        # Blocking errors present — keep current count and rely on feedback prompt
+        adjusted = current
+
+    return max(candidate_min, min(candidate_max, adjusted))
+
+
 def generate_validated_layout(
     spatial_graph: SpatialGraph,
     prompt: str,
@@ -118,7 +183,13 @@ def generate_validated_layout(
     parallel_candidates: int = 1,
     max_workers: int = 4,
 ) -> GenerationResult:
-    """Generate, snap, validate, and retry layout generation up to max iterations."""
+    """Generate, snap, validate, and retry layout generation up to max iterations.
+
+    When parallel_candidates > 1, adaptive fanout adjusts the candidate count
+    each iteration based on prior failure rates and violation severity, clamped
+    to [settings.GENERATION_CANDIDATE_MIN, settings.GENERATION_CANDIDATE_MAX].
+    Serial mode (parallel_candidates == 1) is always deterministic.
+    """
 
     if max_iterations <= 0:
         raise ValueError("max_iterations must be at least 1")
@@ -127,14 +198,30 @@ def generate_validated_layout(
     if max_workers <= 0:
         raise ValueError("max_workers must be at least 1")
 
+    candidate_min = settings.GENERATION_CANDIDATE_MIN
+    candidate_max = settings.GENERATION_CANDIDATE_MAX
+
     constraint_history: list[ConstraintResult] = []
     last_snapped_layout = None
     current_prompt = prompt
+    current_candidates = parallel_candidates
+    prior_constraint_result: ConstraintResult | None = None
+    prior_candidate_errors: int = 0
 
     for iteration in range(1, max_iterations + 1):
+        # Compute adaptive candidate count for this iteration
+        current_candidates = _compute_adaptive_candidates(
+            requested_candidates=current_candidates,
+            prior_constraint_result=prior_constraint_result,
+            prior_candidate_errors=prior_candidate_errors,
+            prior_total_candidates=current_candidates,
+            candidate_min=candidate_min,
+            candidate_max=candidate_max,
+        )
+
         candidate_prompts = [
-            _candidate_prompt(current_prompt, index, parallel_candidates)
-            for index in range(1, parallel_candidates + 1)
+            _candidate_prompt(current_prompt, index, current_candidates)
+            for index in range(1, current_candidates + 1)
         ]
 
         candidate_outcomes: list[tuple[GeneratedLayout, ConstraintResult]] = []
@@ -179,6 +266,10 @@ def generate_validated_layout(
 
         constraint_history.append(constraint_result)
         last_snapped_layout = snapped_layout
+
+        # Track signals for next iteration's adaptive decision
+        prior_constraint_result = constraint_result
+        prior_candidate_errors = len(candidate_errors)
 
         if constraint_result.passed:
             return GenerationResult(
