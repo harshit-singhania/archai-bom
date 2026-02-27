@@ -5,6 +5,7 @@ from collections import defaultdict
 
 from shapely import affinity
 from shapely.geometry import LineString, Point, Polygon, box
+from shapely.strtree import STRtree
 
 from app.models.constraints import (
     ConstraintResult,
@@ -170,33 +171,34 @@ def validate_layout(layout: GeneratedLayout) -> ConstraintResult:
 
     room_overlap_tolerance_mm2 = 10_000.0  # 0.01 sqm
     rooms = layout.rooms
-    for i in range(len(rooms)):
-        for j in range(i + 1, len(rooms)):
-            room_a = rooms[i]
-            room_b = rooms[j]
-            poly_a = room_polygons.get(room_a.name)
-            poly_b = room_polygons.get(room_b.name)
-            if (
-                not poly_a
-                or not poly_b
-                or (not poly_a.is_valid)
-                or (not poly_b.is_valid)
-            ):
-                continue
-
-            overlap_area_mm2 = poly_a.intersection(poly_b).area
-            if overlap_area_mm2 > room_overlap_tolerance_mm2:
-                overlap_sqm = overlap_area_mm2 / 1_000_000.0
-                violations.append(
-                    ConstraintViolation(
-                        type=ConstraintViolationType.ROOM_OVERLAP,
-                        description=(
-                            f"{room_a.name} and {room_b.name} overlap by {overlap_sqm:.2f} sqm."
-                        ),
-                        severity="error",
-                        affected_elements=[room_a.name, room_b.name],
+    valid_room_polys = [
+        (room, room_polygons[room.name])
+        for room in rooms
+        if room.name in room_polygons
+        and room_polygons[room.name] is not None
+        and room_polygons[room.name].is_valid
+    ]
+    if len(valid_room_polys) > 1:
+        _room_strtree = STRtree([poly for _, poly in valid_room_polys])
+        for i, (room_a, poly_a) in enumerate(valid_room_polys):
+            candidate_indices = _room_strtree.query(poly_a)
+            for j in candidate_indices:
+                if j <= i:
+                    continue
+                room_b, poly_b = valid_room_polys[j]
+                overlap_area_mm2 = poly_a.intersection(poly_b).area
+                if overlap_area_mm2 > room_overlap_tolerance_mm2:
+                    overlap_sqm = overlap_area_mm2 / 1_000_000.0
+                    violations.append(
+                        ConstraintViolation(
+                            type=ConstraintViolationType.ROOM_OVERLAP,
+                            description=(
+                                f"{room_a.name} and {room_b.name} overlap by {overlap_sqm:.2f} sqm."
+                            ),
+                            severity="error",
+                            affected_elements=[room_a.name, room_b.name],
+                        )
                     )
-                )
 
     for room in layout.rooms:
         if room.room_type.lower() not in {"corridor", "hallway", "passage"}:
@@ -328,12 +330,20 @@ def validate_layout(layout: GeneratedLayout) -> ConstraintResult:
         fixtures_by_room[fixture.room_name].append(fixture)
 
     for room_name, fixtures in fixtures_by_room.items():
-        for i in range(len(fixtures)):
-            for j in range(i + 1, len(fixtures)):
-                fixture_a = fixtures[i]
-                fixture_b = fixtures[j]
-                poly_a = fixture_geometries[fixture_a.id]
-                poly_b = fixture_geometries[fixture_b.id]
+        valid_room_fixtures = [
+            (fx, fixture_geometries[fx.id])
+            for fx in fixtures
+            if fx.id in fixture_geometries and not fixture_geometries[fx.id].is_empty
+        ]
+        if len(valid_room_fixtures) < 2:
+            continue
+        _fx_strtree = STRtree([poly for _, poly in valid_room_fixtures])
+        for i, (fixture_a, poly_a) in enumerate(valid_room_fixtures):
+            candidate_indices = _fx_strtree.query(poly_a)
+            for j in candidate_indices:
+                if j <= i:
+                    continue
+                fixture_b, poly_b = valid_room_fixtures[j]
                 if poly_a.intersection(poly_b).area > 0:
                     violations.append(
                         ConstraintViolation(
