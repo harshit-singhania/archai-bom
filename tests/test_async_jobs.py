@@ -392,18 +392,21 @@ class TestAPIEnqueueAndPoll:
 
     def test_generate_returns_202_with_job_id(self, client, test_db):
         """POST /api/v1/generate returns 202 with job_id when enqueued."""
-        # Build a minimal valid spatial_graph payload
+        # Build a minimal valid spatial_graph payload using WallSegment schema
         spatial_graph = {
             "rooms": [],
             "walls": [
                 {
-                    "start": {"x": 0, "y": 0},
-                    "end": {"x": 100, "y": 0},
+                    "x1": 0.0,
+                    "y1": 0.0,
+                    "x2": 100.0,
+                    "y2": 0.0,
+                    "length_pts": 100.0,
                     "thickness": 10.0,
                 }
             ],
-            "fixtures": [],
             "scale_factor": 1.0,
+            "page_dimensions": [612.0, 792.0],
         }
         payload = {
             "spatial_graph": spatial_graph,
@@ -426,8 +429,20 @@ class TestAPIEnqueueAndPoll:
 
     def test_generate_400_missing_prompt(self, client, test_db):
         """POST /api/v1/generate returns 400 when prompt is absent."""
+        # Valid wall schema but missing prompt
+        spatial_graph = {
+            "rooms": [],
+            "walls": [
+                {
+                    "x1": 0.0, "y1": 0.0, "x2": 10.0, "y2": 0.0,
+                    "length_pts": 10.0, "thickness": 5.0,
+                }
+            ],
+            "scale_factor": None,
+            "page_dimensions": [612.0, 792.0],
+        }
         response = client.post(
             "/api/v1/generate",
-            json={"spatial_graph": {"walls": [{"start": {"x": 0, "y": 0}, "end": {"x": 10, "y": 0}, "thickness": 5}], "rooms": [], "fixtures": [], "scale_factor": 1.0}},
+            json={"spatial_graph": spatial_graph},
         )
         assert response.status_code == 400
