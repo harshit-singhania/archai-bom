@@ -20,7 +20,7 @@ def convert_images_to_pdf():
     # Define paths
     project_root = Path(__file__).parent.parent
     images_dir = project_root / "sample_images"
-    pdfs_dir = project_root / "sample_pdfs"
+    pdfs_dir = project_root / "sample_pdfs/raster"
     
     # Ensure sample_pdfs directory exists
     pdfs_dir.mkdir(exist_ok=True)
