@@ -49,12 +49,13 @@ def get_bom_by_id(bom_id: int) -> Optional[dict]:
                 "floorplan_id": bom.floorplan_id,
                 "total_cost_inr": bom.total_cost_inr,
                 "bom_data": bom.bom_data,
+                "created_at": bom.created_at.isoformat() if bom.created_at else None,
             }
         return None
 
 
 def get_bom_by_floorplan(floorplan_id: int) -> Optional[dict]:
-    """Get the BOM for a specific floorplan.
+    """Get the most recent BOM for a specific floorplan.
 
     Args:
         floorplan_id: The floorplan ID
@@ -71,6 +72,7 @@ def get_bom_by_floorplan(floorplan_id: int) -> Optional[dict]:
                 "floorplan_id": bom.floorplan_id,
                 "total_cost_inr": bom.total_cost_inr,
                 "bom_data": bom.bom_data,
+                "created_at": bom.created_at.isoformat() if bom.created_at else None,
             }
         return None
 
@@ -105,6 +107,7 @@ def list_boms_by_project(project_id: int) -> List[dict]:
                 "floorplan_id": b.floorplan_id,
                 "total_cost_inr": b.total_cost_inr,
                 "bom_data": b.bom_data,
+                "created_at": b.created_at.isoformat() if b.created_at else None,
             }
             for b in boms
         ]
