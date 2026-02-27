@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import JSON
+from sqlalchemy import JSON, Text
 
 
 class Project(SQLModel, table=True):
@@ -61,3 +61,39 @@ class GeneratedBOM(SQLModel, table=True):
 
     # Relationships
     floorplan: Optional[Floorplan] = Relationship(back_populates="boms")
+
+
+class AsyncJob(SQLModel, table=True):
+    """Durable async job record for ingest and generation workloads.
+
+    Tracks lifecycle transitions (queued -> running -> succeeded | failed)
+    across process boundaries (API process and queue worker process).
+    """
+    __tablename__ = "async_jobs"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Job classification
+    job_type: str  # "ingest" or "generate"
+
+    # Status lifecycle: queued -> running -> succeeded | failed
+    status: str = Field(default="queued")
+
+    # Optional reference to the originating floorplan
+    floorplan_id: Optional[int] = Field(default=None, foreign_key="floorplans.id", nullable=True)
+
+    # Serialized job payload (JSON-encoded string for cross-process portability)
+    payload: Optional[str] = Field(default=None, sa_type=Text)
+
+    # Error details populated on failure
+    error_message: Optional[str] = Field(default=None, sa_type=Text)
+
+    # Result references populated on success
+    # Stores result_type and result_id so callers can fetch the real record
+    result_ref: Optional[Dict[str, Any]] = Field(default=None, sa_type=JSON)
+
+    # Lifecycle timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: Optional[datetime] = Field(default=None)
+    finished_at: Optional[datetime] = Field(default=None)
