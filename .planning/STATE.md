@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T11:10:05.775Z"
+last_updated: "2026-02-27T11:16:43Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 9
 ---
 
 # Project State
@@ -23,32 +23,33 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 1 of 1 (01-concerns-remediation)
-Plan: 09 of 10 in current phase
+Plan: 10 of 10 in current phase
 Status: In progress
-Last activity: 2026-02-27 — Executed plan 08
+Last activity: 2026-02-27 — Executed plan 09
 
-Progress: [▓▓▓▓▓▓▓▓░░] 80%
+Progress: [▓▓▓▓▓▓▓▓▓░] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 6 min
-- Total execution time: 0.8 hours
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-concerns-remediation | 8 | 50m | 6m |
+| 01-concerns-remediation | 9 | 54m | 6m |
 
 **Recent Trend:**
-- Last 5 plans: [10m, 5m, 5m, 5m, 2m]
+- Last 5 plans: [5m, 5m, 5m, 2m, 4m]
 - Trend: Stable
 
 *Updated after each plan completion*
 | Phase 01-concerns-remediation P04 | 8 | 2 tasks | 5 files |
 | Phase 01-concerns-remediation P06 | 4m | 3 tasks | 6 files |
+| Phase 01-concerns-remediation P09 | 4m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ Progress: [▓▓▓▓▓▓▓▓░░] 80%
 - [Phase 01-concerns-remediation]: Used subdirectory-based PDF discovery in conftest; unified categorize_pdf() shared across four test modules
 - [Phase 01-concerns-remediation]: Repository get_* functions return typed dicts; update_* return bool for clean boundaries
 - [Phase 01-concerns-remediation]: SQLModel session engine override via _engine module var injection for test isolation (no DI)
+- [Phase 1 Plan 9]: Used ThreadPoolExecutor(max_workers=1).future.result(timeout=N) for Gemini wall-clock enforcement — SDK has no native timeout
+- [Phase 1 Plan 9]: Non-transient Gemini exceptions bypass retry immediately to surface SDK errors fast
+- [Phase 1 Plan 9]: Adaptive fanout: reduce on provider failure, increase on warnings-only, hold on blocking errors; serial mode always deterministic
 
 ### Pending Todos
 
@@ -78,5 +82,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed plan 06 (01-concerns-remediation) — persistence layer with 24 passing tests
+Stopped at: Completed plan 09 (01-concerns-remediation) — provider resilience with timeout/retry/backoff and adaptive fanout, 22 passing tests
 Resume file: None
