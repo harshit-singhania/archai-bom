@@ -6,35 +6,15 @@ from unittest.mock import patch, MagicMock
 
 from app.models.semantic import SemanticResult, RoomLabel, ScaleInfo
 from app.services.semantic_extractor import extract_semantics
+from tests.conftest import get_categorized_pdf_paths
 
 
-# Discover all PDFs in sample_pdfs/
-SAMPLE_PDFS_DIR = os.path.join(os.path.dirname(__file__), "..", "sample_pdfs")
-ALL_PDF_PATHS = [
-    os.path.join(SAMPLE_PDFS_DIR, f)
-    for f in os.listdir(SAMPLE_PDFS_DIR)
-    if f.endswith(".pdf") and os.path.isfile(os.path.join(SAMPLE_PDFS_DIR, f))
-]
+# ---------------------------------------------------------------------------
+# Lazy PDF discovery — uses conftest helpers, safe when directories absent.
+# ---------------------------------------------------------------------------
+
+ALL_PDF_PATHS, VECTOR_PDF_PATHS, RASTER_PDF_PATHS = get_categorized_pdf_paths()
 ALL_PDF_NAMES = [os.path.basename(p) for p in ALL_PDF_PATHS]
-
-
-# Categorize PDFs by type
-def categorize_pdf(pdf_path):
-    """Check if PDF has vector drawings or raster images."""
-    import fitz
-
-    try:
-        doc = fitz.open(pdf_path)
-        page = doc[0]
-        has_drawings = len(page.get_drawings()) > 0
-        doc.close()
-        return "vector" if has_drawings else "raster"
-    except Exception:
-        return "error"
-
-
-VECTOR_PDF_PATHS = [p for p in ALL_PDF_PATHS if categorize_pdf(p) == "vector"]
-RASTER_PDF_PATHS = [p for p in ALL_PDF_PATHS if categorize_pdf(p) == "raster"]
 VECTOR_PDF_NAMES = [os.path.basename(p) for p in VECTOR_PDF_PATHS]
 RASTER_PDF_NAMES = [os.path.basename(p) for p in RASTER_PDF_PATHS]
 
