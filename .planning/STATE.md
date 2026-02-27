@@ -41,6 +41,9 @@ Progress: [▓▓▓▓▓▓▓▓░░] 80%
 
 - [Phase 1 Plan 1]: Used logger.debug over print for semantic extraction
 - [Phase 1 Plan 1]: Validated Supabase URL strict formatting
+- [Phase 1 Plan 3]: requirements.txt converted to compatibility shim pointing to requirements-lock.txt
+- [Phase 1 Plan 3]: pip-compile --strip-extras used to prevent extras from leaking into lockfile
+- [Phase 1 Plan 3]: Lockfile staleness check in validate-all.sh is a warning (not hard error) for adoption ease
 - [Phase 1 Plan 8]: Use Shapely STRtree (already a project dependency) for O(n log n) candidate prefiltering
 - [Phase 1 Plan 8]: Keep fixture STRtree scoped per-room to avoid cross-room false candidates
 - [Phase 1 Plan 8]: Performance envelope set at 5s for 100 rooms/400 fixtures, 10s for 500 combined
@@ -56,5 +59,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Executed plan 08 (01-concerns-remediation)
+Stopped at: Executed plan 03 (01-concerns-remediation)
 Resume file: None
