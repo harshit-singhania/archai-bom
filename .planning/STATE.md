@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-02-27T11:01:20.437Z"
+progress:
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 10
+  completed_plans: 6
+---
+
 # Project State
 
 ## Project Reference
@@ -34,6 +47,7 @@ Progress: [▓▓▓▓▓▓▓▓░░] 80%
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 01-concerns-remediation P04 | 8 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -47,6 +61,8 @@ Progress: [▓▓▓▓▓▓▓▓░░] 80%
 - [Phase 1 Plan 8]: Use Shapely STRtree (already a project dependency) for O(n log n) candidate prefiltering
 - [Phase 1 Plan 8]: Keep fixture STRtree scoped per-room to avoid cross-room false candidates
 - [Phase 1 Plan 8]: Performance envelope set at 5s for 100 rooms/400 fixtures, 10s for 500 combined
+- [Phase 1 Plan 4]: Used subdirectory-based PDF discovery (sample_pdfs/vector/, sample_pdfs/raster/) in conftest; unified categorize_pdf() shared across four test modules
+- [Phase 01-concerns-remediation]: Used subdirectory-based PDF discovery in conftest; unified categorize_pdf() shared across four test modules
 
 ### Pending Todos
 
@@ -59,5 +75,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Executed plan 03 (01-concerns-remediation)
+Stopped at: Executed plan 04 (01-concerns-remediation)
 Resume file: None
