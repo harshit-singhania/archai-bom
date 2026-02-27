@@ -37,7 +37,12 @@ Take the solid backend (PDF ingestion, layout generation, persistence, async job
   2. Different room types produce different material lists (a bathroom includes waterproofing, a server room includes raised flooring)
   3. Materials pricing table is seeded with ~40-50 real Indian market items across all major categories (walls, flooring, ceiling, doors, electrical, paint)
   4. BOM quantities are geometrically correct — wall area drives drywall quantity, room area drives flooring quantity, perimeter drives baseboard quantity
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-bom-calculator-engine-01-PLAN.md — BOM domain types, materials catalog expansion (~45 items), materials repository
+- [ ] 02-bom-calculator-engine-02-PLAN.md — Deterministic BOM calculator engine (TDD: geometry → priced line items)
+- [ ] 02-bom-calculator-engine-03-PLAN.md — Wire BOM calculator into generate pipeline + integration tests
 
 ### Phase 3: React SPA — Shell + Upload Flow
 **Goal**: A contractor can open a browser, upload a PDF with a prompt, and watch it process
@@ -91,7 +96,7 @@ Phases execute in numeric order: 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Concerns Remediation | 10/10 | Complete | 2026-02-27 |
-| 2. BOM Calculator Engine | 0/? | Not started | - |
+| 2. BOM Calculator Engine | 0/3 | Planned | - |
 | 3. React SPA — Shell + Upload | 0/? | Not started | - |
 | 4. Layout Viz + BOM Table | 0/? | Not started | - |
 | 5. Export + Demo Polish | 0/? | Not started | - |
