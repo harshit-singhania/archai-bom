@@ -188,70 +188,72 @@ Use `get_session()` from `app.core.database`, query `MaterialPricing`, return ty
 
 **Seed Data Expansion** — Update `DEFAULT_MATERIALS` in `scripts/setup_supabase_schema.py` from 10 items to ~45 items. Each item must now include a `category` field. Organize by category:
 
+**IMPORTANT: All prices below are verified against IndiaMART listings (Feb 2026) and represent installed rates for Tier 1 Indian cities. See `02-RESEARCH.md` for sourcing details.**
+
 **Wall (7 items):**
-- Standard Gypsum Drywall (12mm) — sqft — ₹45 — wall
-- Moisture-Resistant Drywall (12mm) — sqft — ₹65 — wall
-- Tempered Glass Partition (10mm) — sqft — ₹350 — wall
-- Laminated Glass Partition (12mm) — sqft — ₹450 — wall
-- AAC Block Partition (100mm) — sqft — ₹55 — wall
-- Cement Board Partition (8mm) — sqft — ₹40 — wall
-- Brick Partition (100mm) — sqft — ₹60 — wall
+- Standard Gypsum Drywall (12mm) — sqft — ₹48 — wall *(IndiaMART: boards ₹310-450/piece + framing/finishing)*
+- Moisture-Resistant Drywall (12mm) — sqft — ₹68 — wall *(IndiaMART: USG Knauf Moistbloc ₹588/piece)*
+- Tempered Glass Partition (10mm) — sqft — ₹380 — wall *(IndiaMART: ₹300-500/sqft fixed panels)*
+- Laminated Glass Partition (12mm) — sqft — ₹520 — wall *(IndiaMART: ₹420-750/sqft slim profile)*
+- AAC Block Partition (100mm) — sqft — ₹58 — wall
+- Cement Board Partition (8mm) — sqft — ₹42 — wall *(IndiaMART: Ramco Hilux ₹180/piece ~8sqft)*
+- Brick Partition Plastered (100mm) — sqft — ₹62 — wall
 
 **Flooring (8 items):**
-- Vitrified Tiles (600x600mm) — sqft — ₹85 — flooring
-- Ceramic Floor Tiles (300x300mm) — sqft — ₹55 — flooring
-- Premium Vinyl Flooring (2mm) — sqft — ₹120 — flooring
-- Engineered Wood Flooring — sqft — ₹250 — flooring
-- Italian Marble Flooring — sqft — ₹400 — flooring
-- Granite Flooring — sqft — ₹180 — flooring
-- Anti-Skid Ceramic Tiles — sqft — ₹70 — flooring
-- Epoxy Flooring (self-leveling) — sqft — ₹150 — flooring
+- Vitrified Tiles (600x600mm) — sqft — ₹45 — flooring *(IndiaMART: ₹23-80/sqft; mid-range + laying)*
+- Ceramic Floor Tiles (300x300mm) — sqft — ₹35 — flooring *(IndiaMART: budget tiles ₹23-26/sqft + laying)*
+- Premium Vinyl Flooring (2mm) — sqft — ₹125 — flooring
+- Engineered Wood Flooring — sqft — ₹260 — flooring
+- Italian Marble Flooring — sqft — ₹420 — flooring
+- Granite Flooring — sqft — ₹190 — flooring
+- Anti-Skid Ceramic Tiles — sqft — ₹55 — flooring
+- Epoxy Flooring (self-leveling) — sqft — ₹155 — flooring
 
 **Ceiling (4 items):**
-- Gypsum False Ceiling (plain) — sqft — ₹75 — ceiling
-- Mineral Fiber Ceiling Tiles (600x600mm) — sqft — ₹65 — ceiling
-- POP False Ceiling — sqft — ₹55 — ceiling
-- Metal Grid Ceiling (exposed) — sqft — ₹95 — ceiling
+- Gypsum False Ceiling (plain) — sqft — ₹65 — ceiling *(IndiaMART: ₹45-75/sqft installed)*
+- Mineral Fiber Ceiling Tiles (600x600mm) — sqft — ₹85 — ceiling *(IndiaMART: Armstrong ₹90, USG Boral ₹70)*
+- POP False Ceiling — sqft — ₹50 — ceiling *(IndiaMART: ₹40-55/sqft office-grade)*
+- Metal Grid Ceiling (exposed) — sqft — ₹110 — ceiling *(IndiaMART: ₹45-250/sqft; GI/aluminum clip-in)*
 
 **Door (4 items):**
-- HDF Flush Door (35mm) — piece — ₹4500 — door
-- Glass Swing Door (10mm tempered) — piece — ₹12000 — door
-- Fire-Rated Door (30 min) — piece — ₹8500 — door
-- Sliding Glass Door Panel — piece — ₹15000 — door
+- HDF Flush Door (35mm) — piece — ₹4800 — door
+- Glass Swing Door (10mm tempered) — piece — ₹12500 — door *(IndiaMART: ₹450-800/sqft × ~21sqft)*
+- Fire-Rated Door (30 min) — piece — ₹9500 — door
+- Sliding Glass Door Panel — piece — ₹16000 — door *(IndiaMART: operable glass ₹1,600/sqft)*
 
 **Door Hardware (3 items):**
-- Aluminum Door Frame — running_foot — ₹180 — door_hardware
+- Aluminum Door Frame — running_foot — ₹195 — door_hardware
 - Stainless Steel Handle Set — piece — ₹650 — door_hardware
 - Hydraulic Door Closer — piece — ₹1200 — door_hardware
 
 **Paint (4 items):**
-- Interior Acrylic Emulsion (per coat) — sqft — ₹12 — paint
-- Wall Primer — sqft — ₹8 — paint
-- Texture Paint (roller finish) — sqft — ₹25 — paint
-- Anti-Fungal Paint — sqft — ₹18 — paint
+- Interior Acrylic Emulsion (per coat) — sqft — ₹14 — paint
+- Wall Primer (1 coat) — sqft — ₹8 — paint
+- Texture Paint (roller finish) — sqft — ₹28 — paint
+- Anti-Fungal Paint — sqft — ₹20 — paint
 
 **Electrical (5 items):**
-- LED Light Point (with wiring) — piece — ₹850 — electrical
-- Power Socket (5A) — piece — ₹350 — electrical
-- Modular Switch Board (4-module) — piece — ₹450 — electrical
-- Data/Network Point (CAT6) — piece — ₹1200 — electrical
-- AC Point (with copper piping) — piece — ₹3500 — electrical
+- LED Panel Light Point (with wiring) — piece — ₹850 — electrical
+- Power Socket (5A modular) — piece — ₹380 — electrical
+- Modular Switch Board (4-module) — piece — ₹480 — electrical
+- Data/Network Point (CAT6) — piece — ₹1250 — electrical
+- AC Point (with copper piping stub) — piece — ₹3800 — electrical
 
 **Baseboard (2 items):**
-- PVC Skirting (75mm) — running_foot — ₹25 — baseboard
-- Wooden Skirting (75mm teak) — running_foot — ₹85 — baseboard
+- PVC Skirting (75mm) — running_foot — ₹28 — baseboard
+- Wooden Skirting (75mm teak) — running_foot — ₹90 — baseboard
 
 **Waterproofing (3 items):**
-- Cementitious Waterproofing (2-coat) — sqft — ₹35 — waterproofing
-- Liquid Membrane Waterproofing — sqft — ₹55 — waterproofing
+- Cementitious Waterproofing (2-coat) — sqft — ₹38 — waterproofing *(IndiaMART: ₹80-173/kg at 40sqft/kg)*
+- Liquid Membrane Waterproofing — sqft — ₹58 — waterproofing *(IndiaMART: ₹149-350/L at ~7sqft/L)*
 - Waterproof Ceramic Wall Tiles — sqft — ₹65 — waterproofing
 
 **Specialty (5 items):**
-- Raised Access Flooring (steel pedestal) — sqft — ₹220 — specialty
-- Kitchen Backsplash Tiles (ceramic) — sqft — ₹75 — specialty
-- Acoustic Soundproofing Panel — sqft — ₹180 — specialty
-- Anti-Static Vinyl Flooring — sqft — ₹160 — specialty
-- Stainless Steel Backsplash — sqft — ₹250 — specialty
+- Raised Access Flooring (steel pedestal) — sqft — ₹235 — specialty
+- Kitchen Backsplash Tiles (ceramic) — sqft — ₹78 — specialty
+- Acoustic Soundproofing Panel — sqft — ₹185 — specialty
+- Anti-Static Vinyl Flooring — sqft — ₹165 — specialty
+- Stainless Steel Backsplash — sqft — ₹260 — specialty
 
 **Total: 45 items.**
 
