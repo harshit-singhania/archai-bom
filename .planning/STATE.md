@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T11:16:43Z"
+last_updated: "2026-02-27T11:21:00Z"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -70,6 +70,10 @@ Progress: [▓▓▓▓▓▓▓▓▓░] 90%
 - [Phase 1 Plan 9]: Used ThreadPoolExecutor(max_workers=1).future.result(timeout=N) for Gemini wall-clock enforcement — SDK has no native timeout
 - [Phase 1 Plan 9]: Non-transient Gemini exceptions bypass retry immediately to surface SDK errors fast
 - [Phase 1 Plan 9]: Adaptive fanout: reduce on provider failure, increase on warnings-only, hold on blocking errors; serial mode always deterministic
+- [Phase 1 Plan 7]: Non-blocking persistence: DB create/update failures logged as warnings, pipeline always returns result
+- [Phase 1 Plan 7]: Floorplan.project_id made nullable (Optional[int]) to support standalone ingest without project context
+- [Phase 1 Plan 7]: Status endpoint uses int path param type for type-safe routing; 404 for unknown IDs
+- [Phase 1 Plan 7]: BOM total_cost_inr=0.0 for generation snapshots — cost calculation is downstream concern
 
 ### Pending Todos
 
@@ -82,5 +86,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed plan 09 (01-concerns-remediation) — provider resilience with timeout/retry/backoff and adaptive fanout, 22 passing tests
+Stopped at: Completed plan 07 (01-concerns-remediation) — persistence-integrated API routes with lifecycle status tracking and 9 status contract tests
 Resume file: None
