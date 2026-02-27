@@ -13,10 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
-COPY requirements.txt .
+# Install python dependencies from pinned lockfile for deterministic builds
+COPY requirements.in requirements-lock.txt ./
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements-lock.txt
 
 # Copy project files
 COPY . .
