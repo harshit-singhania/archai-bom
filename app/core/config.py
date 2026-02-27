@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     GENERATION_PARALLEL_CANDIDATES: int = 2
     GENERATION_MAX_WORKERS: int = 4
 
+    # Generation provider timeout/retry/backoff
+    GENERATION_TIMEOUT_SECONDS: float = 60.0  # Max seconds per Gemini call
+    GENERATION_MAX_RETRIES: int = 3  # Max retry attempts on transient errors
+    GENERATION_RETRY_BASE_DELAY: float = 1.0  # Initial backoff delay in seconds
+    GENERATION_RETRY_MAX_DELAY: float = 30.0  # Maximum backoff delay cap in seconds
+
+    # Adaptive fanout controls
+    GENERATION_CANDIDATE_MIN: int = 1  # Minimum allowed parallel candidates
+    GENERATION_CANDIDATE_MAX: int = 4  # Maximum allowed parallel candidates
+
     # Security Settings
     API_AUTH_KEY: str = ""  # Required for API access in production
     ALLOWED_ORIGINS: str = "*"  # Comma-separated list of allowed CORS origins
