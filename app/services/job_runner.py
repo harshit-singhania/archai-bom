@@ -69,7 +69,9 @@ def run_job(job_id: int) -> None:
     except Exception as exc:
         error_message = f"{type(exc).__name__}: {exc}"
         mark_job_failed(job_id, error_message=error_message)
-        logger.error("Job %s failed (type=%s): %s", job_id, job["job_type"], error_message)
+        logger.error(
+            "Job %s failed (type=%s): %s", job_id, job["job_type"], error_message
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +100,9 @@ def _run_ingest_job(job: Dict[str, Any]) -> Dict[str, Any]:
         result = ingest_pdf(pdf_path)
     except Exception:
         if floorplan_id is not None:
-            update_floorplan_error(floorplan_id, "Ingestion failed in background worker")
+            update_floorplan_error(
+                floorplan_id, "Ingestion failed in background worker"
+            )
         raise
 
     if floorplan_id is not None:
@@ -136,15 +140,20 @@ def _run_generate_job(job: Dict[str, Any]) -> Dict[str, Any]:
         result_ref dict with result_type="bom" and optional result_id.
     """
     from app.core.config import settings
+    from app.models.bom import MaterialInfo
     from app.models.spatial import SpatialGraph
+    from app.services.bom_calculator import calculate_bom
     from app.services.generation_pipeline import generate_validated_layout
     from app.services.bom_repository import create_bom
+    from app.services.materials_repository import get_all_materials
 
     payload = _parse_payload(job)
     spatial_graph_data = payload["spatial_graph"]
     prompt: str = payload["prompt"]
     floorplan_id: Optional[int] = payload.get("floorplan_id")
-    parallel_candidates: int = int(payload.get("parallel_candidates", settings.GENERATION_PARALLEL_CANDIDATES))
+    parallel_candidates: int = int(
+        payload.get("parallel_candidates", settings.GENERATION_PARALLEL_CANDIDATES)
+    )
     max_workers: int = int(payload.get("max_workers", settings.GENERATION_MAX_WORKERS))
 
     spatial_graph = SpatialGraph.model_validate(spatial_graph_data)
@@ -174,10 +183,28 @@ def _run_generate_job(job: Dict[str, Any]) -> Dict[str, Any]:
             "layout": result.layout.to_json(),
             "prompt": prompt,
         }
+
+        total_cost = 0.0
+        try:
+            raw_materials = get_all_materials()
+            materials = [MaterialInfo(**material) for material in raw_materials]
+            bom_result = calculate_bom(layout=result.layout, materials=materials)
+            total_cost = bom_result.grand_total_inr
+            bom_data["line_items"] = [
+                item.model_dump(mode="json") for item in bom_result.line_items
+            ]
+            bom_data["room_count"] = bom_result.room_count
+            bom_data["total_area_sqm"] = bom_result.total_area_sqm
+        except Exception as calc_exc:
+            logger.warning(
+                "BOM calculation failed, storing layout without pricing: %s",
+                calc_exc,
+            )
+
         try:
             bom_id = create_bom(
                 floorplan_id=floorplan_id,
-                total_cost_inr=0.0,
+                total_cost_inr=total_cost,
                 bom_data=bom_data,
             )
             result_ref["result_id"] = bom_id

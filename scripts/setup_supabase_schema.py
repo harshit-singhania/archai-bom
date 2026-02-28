@@ -4,7 +4,7 @@ Setup Supabase schema and seed data.
 
 This script:
 1. Creates the database tables using SQLModel
-2. Seeds materials_pricing with 10 basic materials
+2. Seeds materials_pricing with 45 categorized materials
 3. Creates sample project with floorplan and BOM
 
 Usage:
@@ -13,6 +13,7 @@ Usage:
 
 import os
 import sys
+from collections import Counter
 from datetime import datetime
 
 # Add project root to path
@@ -23,57 +24,287 @@ from app.core.config import settings
 from app.models.database import Project, Floorplan, MaterialPricing, GeneratedBOM
 
 
-# Hardcoded materials for Indian market (MVP starter set)
+# Hardcoded materials for Indian market (MVP catalog, Feb 2026)
 DEFAULT_MATERIALS = [
+    # Wall (7)
     {
         "material_name": "Standard Gypsum Drywall (12mm)",
         "unit_of_measurement": "sqft",
-        "cost_inr": 45.0,
+        "cost_inr": 48.0,
+        "category": "wall",
     },
     {
         "material_name": "Moisture-Resistant Drywall (12mm)",
         "unit_of_measurement": "sqft",
-        "cost_inr": 65.0,
+        "cost_inr": 68.0,
+        "category": "wall",
     },
     {
         "material_name": "Tempered Glass Partition (10mm)",
         "unit_of_measurement": "sqft",
-        "cost_inr": 350.0,
+        "cost_inr": 380.0,
+        "category": "wall",
     },
     {
         "material_name": "Laminated Glass Partition (12mm)",
         "unit_of_measurement": "sqft",
-        "cost_inr": 450.0,
+        "cost_inr": 520.0,
+        "category": "wall",
     },
+    {
+        "material_name": "AAC Block Partition (100mm)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 58.0,
+        "category": "wall",
+    },
+    {
+        "material_name": "Cement Board Partition (8mm)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 42.0,
+        "category": "wall",
+    },
+    {
+        "material_name": "Brick Partition Plastered (100mm)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 62.0,
+        "category": "wall",
+    },
+    # Flooring (8)
     {
         "material_name": "Vitrified Tiles (600x600mm)",
         "unit_of_measurement": "sqft",
-        "cost_inr": 85.0,
+        "cost_inr": 45.0,
+        "category": "flooring",
     },
     {
-        "material_name": "Ceramic Wall Tiles (300x600mm)",
+        "material_name": "Ceramic Floor Tiles (300x300mm)",
         "unit_of_measurement": "sqft",
-        "cost_inr": 55.0,
+        "cost_inr": 35.0,
+        "category": "flooring",
     },
     {
         "material_name": "Premium Vinyl Flooring (2mm)",
         "unit_of_measurement": "sqft",
-        "cost_inr": 120.0,
+        "cost_inr": 125.0,
+        "category": "flooring",
     },
     {
         "material_name": "Engineered Wood Flooring",
         "unit_of_measurement": "sqft",
-        "cost_inr": 250.0,
+        "cost_inr": 260.0,
+        "category": "flooring",
     },
     {
-        "material_name": "Aluminum Door Frame",
-        "unit_of_measurement": "running_foot",
-        "cost_inr": 180.0,
+        "material_name": "Italian Marble Flooring",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 420.0,
+        "category": "flooring",
     },
+    {
+        "material_name": "Granite Flooring",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 190.0,
+        "category": "flooring",
+    },
+    {
+        "material_name": "Anti-Skid Ceramic Tiles",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 55.0,
+        "category": "flooring",
+    },
+    {
+        "material_name": "Epoxy Flooring (self-leveling)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 155.0,
+        "category": "flooring",
+    },
+    # Ceiling (4)
+    {
+        "material_name": "Gypsum False Ceiling (plain)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 65.0,
+        "category": "ceiling",
+    },
+    {
+        "material_name": "Mineral Fiber Ceiling Tiles (600x600mm)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 85.0,
+        "category": "ceiling",
+    },
+    {
+        "material_name": "POP False Ceiling",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 50.0,
+        "category": "ceiling",
+    },
+    {
+        "material_name": "Metal Grid Ceiling (exposed)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 110.0,
+        "category": "ceiling",
+    },
+    # Door (4)
     {
         "material_name": "HDF Flush Door (35mm)",
         "unit_of_measurement": "piece",
-        "cost_inr": 4500.0,
+        "cost_inr": 4800.0,
+        "category": "door",
+    },
+    {
+        "material_name": "Glass Swing Door (10mm tempered)",
+        "unit_of_measurement": "piece",
+        "cost_inr": 12500.0,
+        "category": "door",
+    },
+    {
+        "material_name": "Fire-Rated Door (30 min)",
+        "unit_of_measurement": "piece",
+        "cost_inr": 9500.0,
+        "category": "door",
+    },
+    {
+        "material_name": "Sliding Glass Door Panel",
+        "unit_of_measurement": "piece",
+        "cost_inr": 16000.0,
+        "category": "door",
+    },
+    # Door hardware (3)
+    {
+        "material_name": "Aluminum Door Frame",
+        "unit_of_measurement": "running_foot",
+        "cost_inr": 195.0,
+        "category": "door_hardware",
+    },
+    {
+        "material_name": "Stainless Steel Handle Set",
+        "unit_of_measurement": "piece",
+        "cost_inr": 650.0,
+        "category": "door_hardware",
+    },
+    {
+        "material_name": "Hydraulic Door Closer",
+        "unit_of_measurement": "piece",
+        "cost_inr": 1200.0,
+        "category": "door_hardware",
+    },
+    # Paint (4)
+    {
+        "material_name": "Interior Acrylic Emulsion (per coat)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 14.0,
+        "category": "paint",
+    },
+    {
+        "material_name": "Wall Primer (1 coat)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 8.0,
+        "category": "paint",
+    },
+    {
+        "material_name": "Texture Paint (roller finish)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 28.0,
+        "category": "paint",
+    },
+    {
+        "material_name": "Anti-Fungal Paint",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 20.0,
+        "category": "paint",
+    },
+    # Electrical (5)
+    {
+        "material_name": "LED Panel Light Point (with wiring)",
+        "unit_of_measurement": "piece",
+        "cost_inr": 850.0,
+        "category": "electrical",
+    },
+    {
+        "material_name": "Power Socket (5A modular)",
+        "unit_of_measurement": "piece",
+        "cost_inr": 380.0,
+        "category": "electrical",
+    },
+    {
+        "material_name": "Modular Switch Board (4-module)",
+        "unit_of_measurement": "piece",
+        "cost_inr": 480.0,
+        "category": "electrical",
+    },
+    {
+        "material_name": "Data/Network Point (CAT6)",
+        "unit_of_measurement": "piece",
+        "cost_inr": 1250.0,
+        "category": "electrical",
+    },
+    {
+        "material_name": "AC Point (with copper piping stub)",
+        "unit_of_measurement": "piece",
+        "cost_inr": 3800.0,
+        "category": "electrical",
+    },
+    # Baseboard (2)
+    {
+        "material_name": "PVC Skirting (75mm)",
+        "unit_of_measurement": "running_foot",
+        "cost_inr": 28.0,
+        "category": "baseboard",
+    },
+    {
+        "material_name": "Wooden Skirting (75mm teak)",
+        "unit_of_measurement": "running_foot",
+        "cost_inr": 90.0,
+        "category": "baseboard",
+    },
+    # Waterproofing (3)
+    {
+        "material_name": "Cementitious Waterproofing (2-coat)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 38.0,
+        "category": "waterproofing",
+    },
+    {
+        "material_name": "Liquid Membrane Waterproofing",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 58.0,
+        "category": "waterproofing",
+    },
+    {
+        "material_name": "Waterproof Ceramic Wall Tiles",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 65.0,
+        "category": "waterproofing",
+    },
+    # Specialty (5)
+    {
+        "material_name": "Raised Access Flooring (steel pedestal)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 235.0,
+        "category": "specialty",
+    },
+    {
+        "material_name": "Kitchen Backsplash Tiles (ceramic)",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 78.0,
+        "category": "specialty",
+    },
+    {
+        "material_name": "Acoustic Soundproofing Panel",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 185.0,
+        "category": "specialty",
+    },
+    {
+        "material_name": "Anti-Static Vinyl Flooring",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 165.0,
+        "category": "specialty",
+    },
+    {
+        "material_name": "Stainless Steel Backsplash",
+        "unit_of_measurement": "sqft",
+        "cost_inr": 260.0,
+        "category": "specialty",
     },
 ]
 
@@ -121,11 +352,12 @@ def seed_materials(session: Session):
     """Seed materials_pricing table with default materials."""
     print("\n🏗️ Seeding materials pricing...")
 
-    # Check if materials already exist
-    existing = session.exec(select(MaterialPricing)).first()
-    if existing:
-        print("⚠️  Materials already seeded. Skipping.")
-        return
+    existing_materials = session.exec(select(MaterialPricing)).all()
+    if existing_materials:
+        for material in existing_materials:
+            session.delete(material)
+        session.commit()
+        print(f"🔄 Cleared {len(existing_materials)} existing materials for re-seed")
 
     for material_data in DEFAULT_MATERIALS:
         material = MaterialPricing(**material_data)
@@ -134,10 +366,19 @@ def seed_materials(session: Session):
     session.commit()
     print(f"✅ Seeded {len(DEFAULT_MATERIALS)} materials")
 
-    # Print summary
-    for material in session.exec(select(MaterialPricing)):
+    seeded_materials = session.exec(select(MaterialPricing)).all()
+    category_counts = Counter(material.category for material in seeded_materials)
+
+    print("\n📦 Category breakdown:")
+    for category, count in sorted(category_counts.items()):
+        print(f"   • {category}: {count}")
+
+    print("\n📋 Material catalog:")
+    for material in seeded_materials:
         print(
-            f"   • {material.material_name}: ₹{material.cost_inr}/{material.unit_of_measurement}"
+            "   • "
+            f"{material.material_name} [{material.category}]: "
+            f"₹{material.cost_inr}/{material.unit_of_measurement}"
         )
 
 
@@ -284,7 +525,9 @@ def main():
         print("=" * 60)
         print("\nYour Supabase database is ready with:")
         print("  • 4 tables: projects, floorplans, materials_pricing, generated_boms")
-        print("  • 10 default materials with Indian market pricing")
+        print(
+            "  • 45 default materials across 10 categories with Indian market pricing"
+        )
         print("  • 1 sample project with floorplan and BOM")
 
     except Exception as e:

@@ -11,7 +11,15 @@ echo " GSD ► VALIDATING TEMPLATES"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-for file in .gsd/templates/*.md; do
+shopt -s nullglob
+template_files=(.gsd/templates/*.md)
+shopt -u nullglob
+
+if [ ${#template_files[@]} -eq 0 ]; then
+    echo "ℹ️  No template files found in .gsd/templates/ (skipping)"
+fi
+
+for file in "${template_files[@]}"; do
     ((templates_checked++))
     filename=$(basename "$file")
     has_errors=false
