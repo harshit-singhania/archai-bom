@@ -17,16 +17,20 @@ You are in the `app/` directory containing the core application code.
    - Validation: Run `pytest` and `./scripts/validate-all.sh`
    - State: Update `.planning/STATE.md` before ending session
 
-## This Directory Structure
+## MVC Architecture
 
 ```
 app/
-├── api/          # Flask routes and endpoints
-├── core/         # Config, database, shared utilities
-├── models/       # Pydantic/SQLModel schemas
-├── services/     # Business logic (repositories, calculator, pipeline)
-└── workers/      # RQ background job workers
+├── api/            # Controllers — HTTP parsing, response serialization, zero business logic
+├── services/       # Services — business logic, orchestration, domain rules, pipelines
+├── repositories/   # Repositories — data access only, return typed dicts, not ORM objects
+├── integrations/   # Integrations — external API adapters (Gemini, PyMuPDF)
+├── workers/        # Workers — Redis/RQ queue infrastructure + job runner dispatch
+├── models/         # Models — Pydantic schemas + SQLModel ORM tables
+└── core/           # Core — config, database engine/session management
 ```
+
+**Layer rules:** Controllers → Services → Repositories/Integrations. No skipping layers.
 
 ## Key Conventions
 

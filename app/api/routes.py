@@ -7,26 +7,26 @@ Responsibilities of this module:
   - Serialise service results to JSON responses
 
 Business logic lives in:
-  app/api/ingest_service.py   → POST /ingest
-  app/api/generate_service.py → POST /generate
-  app/api/status_service.py   → GET /status/<pdf_id>, GET /jobs/<job_id>
+  app/services/ingest_service.py   → POST /ingest
+  app/services/generate_service.py → POST /generate
+  app/services/status_service.py   → GET /status/<pdf_id>, GET /jobs/<job_id>
 """
 
 import logging
 
 from flask import Blueprint, jsonify, request
 
-from app.api.generate_service import (
+from app.services.generate_service import (
     GenerateEnqueueError,
     GenerateValidationError,
     enqueue_generate,
 )
-from app.api.ingest_service import (
+from app.services.ingest_service import (
     IngestEnqueueError,
     IngestValidationError,
     enqueue_ingest,
 )
-from app.api.status_service import (
+from app.services.status_service import (
     FloorplanNotFoundError,
     JobNotFoundError,
     get_floorplan_status,

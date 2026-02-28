@@ -23,14 +23,29 @@ This repository uses the **GSD (Get Shit Done)** framework. Before any changes:
 5. **State Update**:
    - Update `.planning/STATE.md` before ending session.
 
-## 2. Directory-Specific Guidelines
+## 2. MVC Architecture
+
+```
+app/
+├── api/            # Controllers — HTTP parsing, response serialization, zero business logic
+├── services/       # Services — business logic, orchestration, domain rules, pipelines
+├── repositories/   # Repositories — data access only, return typed dicts, not ORM objects
+├── integrations/   # Integrations — external API adapters (Gemini, PyMuPDF)
+├── workers/        # Workers — Redis/RQ queue infrastructure + job runner dispatch
+├── models/         # Models — Pydantic schemas + SQLModel ORM tables
+└── core/           # Core — config, database engine/session management
+```
+
+**Layer rules:** Controllers → Services → Repositories/Integrations. No skipping layers.
+
+## 3. Directory-Specific Guidelines
 
 - `app/` — Application code: `app/CLAUDE.md`
 - `tests/` — Test suite: `tests/CLAUDE.md`
 - `.planning/` — Project plans: `.planning/CLAUDE.md`
 - `scripts/` — Utility scripts: `scripts/CLAUDE.md`
 
-## 3. Dev & Test Commands
+## 4. Dev & Test Commands
 
 ```bash
 pip install -r requirements-lock.txt
@@ -39,7 +54,7 @@ pytest -x                         # Stop on first failure
 ./scripts/validate-all.sh         # Run all validators
 ```
 
-## 4. Code Style & Architecture
+## 5. Code Style & Architecture
 
 - **Format:** 100 char lines, 4 spaces, double quotes.
 - **Imports:** 3 sections (stdlib, third-party, local).

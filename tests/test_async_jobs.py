@@ -14,7 +14,7 @@ from unittest.mock import patch, MagicMock
 
 from app.core import database as db_module
 from app.main import app
-from app.services.job_repository import (
+from app.repositories.job_repository import (
     create_job,
     get_job_by_id,
     list_jobs_by_floorplan,
@@ -64,7 +64,7 @@ class TestJobRepositoryLifecycle:
 
     def test_create_job_with_payload_and_floorplan(self, test_db):
         """Payload and floorplan_id are stored and retrievable."""
-        from app.services.floorplan_repository import create_floorplan
+        from app.repositories.floorplan_repository import create_floorplan
 
         floorplan_id = create_floorplan(pdf_storage_url="sample.pdf", status="uploaded")
 
@@ -147,7 +147,7 @@ class TestJobRepositoryLifecycle:
 
     def test_list_jobs_by_floorplan(self, test_db):
         """list_jobs_by_floorplan returns all jobs for a floorplan."""
-        from app.services.floorplan_repository import create_floorplan
+        from app.repositories.floorplan_repository import create_floorplan
 
         fp_id = create_floorplan(pdf_storage_url="multi.pdf", status="uploaded")
 
@@ -225,8 +225,8 @@ class TestWorkerExecutesAndPersistsResults:
 
     def test_worker_executes_ingest_job_and_persists_success(self, test_db):
         """run_job for an ingest job transitions to succeeded with result_ref."""
-        from app.services.job_runner import run_job
-        from app.services.floorplan_repository import create_floorplan
+        from app.workers.job_runner import run_job
+        from app.repositories.floorplan_repository import create_floorplan
 
         # Create a realistic temp PDF substitute (empty file for mock path)
         floorplan_id = create_floorplan(
@@ -246,9 +246,9 @@ class TestWorkerExecutesAndPersistsResults:
         mock_result.source = "vector"
         mock_result.wall_segments = []
 
-        with patch("app.services.job_runner.ingest_pdf", return_value=mock_result):
-            with patch("app.services.job_runner.update_floorplan_vector_data"):
-                with patch("app.services.job_runner.update_floorplan_status"):
+        with patch("app.workers.job_runner.ingest_pdf", return_value=mock_result):
+            with patch("app.workers.job_runner.update_floorplan_vector_data"):
+                with patch("app.workers.job_runner.update_floorplan_status"):
                     run_job(job_id)
 
         job = get_job_by_id(job_id)
@@ -259,8 +259,8 @@ class TestWorkerExecutesAndPersistsResults:
 
     def test_worker_executes_ingest_job_and_persists_failure(self, test_db):
         """run_job for a failed ingest transitions to failed with error_message."""
-        from app.services.job_runner import run_job
-        from app.services.floorplan_repository import create_floorplan
+        from app.workers.job_runner import run_job
+        from app.repositories.floorplan_repository import create_floorplan
 
         floorplan_id = create_floorplan(
             pdf_storage_url="fail_test.pdf", status="uploaded"
@@ -271,9 +271,9 @@ class TestWorkerExecutesAndPersistsResults:
         )
 
         with patch(
-            "app.services.job_runner.ingest_pdf", side_effect=RuntimeError("No API key")
+            "app.workers.job_runner.ingest_pdf", side_effect=RuntimeError("No API key")
         ):
-            with patch("app.services.job_runner.update_floorplan_error"):
+            with patch("app.workers.job_runner.update_floorplan_error"):
                 run_job(job_id)
 
         job = get_job_by_id(job_id)
@@ -282,8 +282,8 @@ class TestWorkerExecutesAndPersistsResults:
 
     def test_worker_marks_running_before_executing(self, test_db):
         """run_job sets status=running before executing the pipeline."""
-        from app.services.job_runner import run_job
-        from app.services.floorplan_repository import create_floorplan
+        from app.workers.job_runner import run_job
+        from app.repositories.floorplan_repository import create_floorplan
 
         floorplan_id = create_floorplan(
             pdf_storage_url="running_test.pdf", status="uploaded"
@@ -303,15 +303,15 @@ class TestWorkerExecutesAndPersistsResults:
             seen_statuses.append(job["status"])
             raise RuntimeError("Abort early")
 
-        with patch("app.services.job_runner.ingest_pdf", side_effect=capturing_ingest):
-            with patch("app.services.job_runner.update_floorplan_error"):
+        with patch("app.workers.job_runner.ingest_pdf", side_effect=capturing_ingest):
+            with patch("app.workers.job_runner.update_floorplan_error"):
                 run_job(job_id)
 
         assert "running" in seen_statuses
 
     def test_worker_handles_unknown_job_type_gracefully(self, test_db):
         """run_job with an unrecognised job_type marks the job as failed."""
-        from app.services.job_runner import run_job
+        from app.workers.job_runner import run_job
         from app.models.database import AsyncJob
         from app.core.database import get_session
 
@@ -363,7 +363,7 @@ class TestAPIEnqueueAndPoll:
 
         # Patch enqueue_ingest_job to return a fake job_id without real Redis
         with patch(
-            "app.api.ingest_service.enqueue_ingest_job", return_value=1
+            "app.services.ingest_service.enqueue_ingest_job", return_value=1
         ) as mock_enqueue:
             response = client.post(
                 "/api/v1/ingest",
@@ -398,7 +398,7 @@ class TestAPIEnqueueAndPoll:
 
     def test_status_endpoint_reflects_queued_job(self, client, test_db):
         """GET /api/v1/status/<pdf_id> returns job status when job exists."""
-        from app.services.floorplan_repository import create_floorplan
+        from app.repositories.floorplan_repository import create_floorplan
 
         floorplan_id = create_floorplan(
             pdf_storage_url="status_test.pdf", status="uploaded"
@@ -436,7 +436,7 @@ class TestAPIEnqueueAndPoll:
         }
 
         with patch(
-            "app.api.generate_service.enqueue_generate_job", return_value=42
+            "app.services.generate_service.enqueue_generate_job", return_value=42
         ) as mock_gen:
             response = client.post("/api/v1/generate", json=payload)
 

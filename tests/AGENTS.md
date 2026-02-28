@@ -21,13 +21,19 @@ You are in the `tests/` directory containing the test suite.
 
 ```
 tests/
-├── conftest.py              # Shared fixtures (test_db, client)
-├── test_async_jobs.py       # Job lifecycle and worker tests
-├── test_bom_calculator.py   # BOM deterministic math tests
-├── test_bom_integration.py  # End-to-end BOM flow tests
-├── test_generation_endpoint.py  # API contract tests
-├── test_repositories.py     # DB repository tests
-├── test_status_endpoint.py  # Status API tests
+├── conftest.py                    # Shared fixtures (test_db, client)
+├── test_async_jobs.py             # Job lifecycle and worker tests
+├── test_bom_calculator.py         # BOM deterministic math tests
+├── test_bom_integration.py        # End-to-end BOM flow tests
+├── test_generation_endpoint.py    # API contract tests (generate)
+├── test_ingestion_pipeline.py     # API contract tests (ingest)
+├── test_repositories.py           # DB repository tests
+├── test_status_endpoint.py        # Status API tests
+├── test_pdf_extractor.py          # Integration: PDF extraction
+├── test_semantic_extractor.py     # Integration: Gemini semantic
+├── test_layout_generator.py       # Integration: Gemini layout
+├── test_raster_wall_extractor.py  # Integration: raster wall detection
+├── test_wall_detector.py          # Service: wall detection logic
 └── ...
 ```
 

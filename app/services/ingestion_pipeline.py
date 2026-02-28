@@ -3,9 +3,9 @@
 import logging
 
 from app.models.geometry import WallDetectionResult
-from app.services.pdf_extractor import extract_vectors
+from app.integrations.pdf_extractor import extract_vectors
+from app.integrations.raster_wall_extractor import extract_walls_from_raster
 from app.services.wall_detector import detect_walls
-from app.services.raster_wall_extractor import extract_walls_from_raster
 
 logger = logging.getLogger(__name__)
 

@@ -94,7 +94,7 @@ def enqueue_job(db_job_id: int) -> str:
         ImportError: If redis/rq packages are not installed.
         redis.exceptions.ConnectionError: If Redis is unreachable.
     """
-    from app.services.job_runner import run_job  # noqa: PLC0415
+    from app.workers.job_runner import run_job  # noqa: PLC0415
 
     queue = _get_queue()
     rq_job = queue.enqueue(
@@ -140,7 +140,7 @@ def _build_retry() -> Optional[object]:
 
         # Exponential-ish backoff: [5, 10, 20] seconds for 3 retries
         delays = [
-            settings.JOB_RETRY_DELAY_SECONDS * (2 ** i)
+            settings.JOB_RETRY_DELAY_SECONDS * (2**i)
             for i in range(settings.JOB_MAX_RETRIES)
         ]
         return Retry(max=settings.JOB_MAX_RETRIES, interval=delays)

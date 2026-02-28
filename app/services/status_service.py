@@ -12,9 +12,9 @@ failures so the controller can map them to the correct HTTP status codes.
 import logging
 from typing import Any
 
-from app.services.bom_repository import get_bom_by_floorplan
-from app.services.floorplan_repository import get_floorplan_by_id
-from app.services.job_repository import get_job_by_id, list_jobs_by_floorplan
+from app.repositories.bom_repository import get_bom_by_floorplan
+from app.repositories.floorplan_repository import get_floorplan_by_id
+from app.repositories.job_repository import get_job_by_id, list_jobs_by_floorplan
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import pytest
 
 from app.models.geometry import ExtractionResult, VectorLine, WallSegment
 from app.services.wall_detector import detect_walls
-from app.services.pdf_extractor import extract_vectors
+from app.integrations.pdf_extractor import extract_vectors
 from tests.conftest import get_categorized_pdf_paths
 
 
@@ -25,19 +25,22 @@ def test_detect_walls_filters_by_thickness():
 
     # Thick lines
     for i in range(5):
-        lines.append(VectorLine(x1=0, y1=i*10, x2=100, y2=i*10, width=2.0))
+        lines.append(VectorLine(x1=0, y1=i * 10, x2=100, y2=i * 10, width=2.0))
 
     # Thin lines
     for i in range(5):
-        lines.append(VectorLine(x1=0, y1=i*10+5, x2=100, y2=i*10+5, width=0.5))
+        lines.append(VectorLine(x1=0, y1=i * 10 + 5, x2=100, y2=i * 10 + 5, width=0.5))
 
-    extraction = ExtractionResult(lines=lines, page_width=800, page_height=600, metadata={})
+    extraction = ExtractionResult(
+        lines=lines, page_width=800, page_height=600, metadata={}
+    )
 
     result = detect_walls(extraction, wall_thickness_min=1.5)
 
     assert result.total_wall_count == 5
     assert len(result.wall_segments) == 5
     assert result.total_linear_pts == 5 * 100.0
+
 
 def test_detect_walls_deduplicates():
     # Two thick lines perfectly overlapping
@@ -46,11 +49,14 @@ def test_detect_walls_deduplicates():
         VectorLine(x1=10, y1=10, x2=50, y2=10, width=2.0),
     ]
 
-    extraction = ExtractionResult(lines=lines, page_width=800, page_height=600, metadata={})
+    extraction = ExtractionResult(
+        lines=lines, page_width=800, page_height=600, metadata={}
+    )
     result = detect_walls(extraction)
 
     assert result.total_wall_count == 1
     assert result.total_linear_pts == 40.0
+
 
 def test_detect_walls_deduplicates_within_tolerance():
     # Two thick lines close but not identical
@@ -60,18 +66,21 @@ def test_detect_walls_deduplicates_within_tolerance():
         VectorLine(x1=11, y1=11, x2=51, y2=11, width=2.0),
     ]
 
-    extraction = ExtractionResult(lines=lines, page_width=800, page_height=600, metadata={})
+    extraction = ExtractionResult(
+        lines=lines, page_width=800, page_height=600, metadata={}
+    )
     result = detect_walls(extraction)
 
     assert result.total_wall_count == 1
 
+
 def test_detect_walls_length_calculation():
     # 3-4-5 triangle line
-    lines = [
-        VectorLine(x1=0, y1=0, x2=30, y2=40, width=2.0)
-    ]
+    lines = [VectorLine(x1=0, y1=0, x2=30, y2=40, width=2.0)]
 
-    extraction = ExtractionResult(lines=lines, page_width=800, page_height=600, metadata={})
+    extraction = ExtractionResult(
+        lines=lines, page_width=800, page_height=600, metadata={}
+    )
     result = detect_walls(extraction)
 
     assert result.total_wall_count == 1
@@ -88,18 +97,24 @@ def test_detect_walls_standardizes_direction():
         VectorLine(x1=300, y1=100, x2=300, y2=50, width=2.0),  # Bottom-to-top
     ]
 
-    extraction = ExtractionResult(lines=lines, page_width=800, page_height=600, metadata={})
+    extraction = ExtractionResult(
+        lines=lines, page_width=800, page_height=600, metadata={}
+    )
     result = detect_walls(extraction)
 
     # Horizontal walls should have x1 < x2
     horizontals = [w for w in result.wall_segments if abs(w.y2 - w.y1) < 0.1]
     for wall in horizontals:
-        assert wall.x1 < wall.x2, f"Horizontal wall not standardized: ({wall.x1}, {wall.y1}) -> ({wall.x2}, {wall.y2})"
+        assert wall.x1 < wall.x2, (
+            f"Horizontal wall not standardized: ({wall.x1}, {wall.y1}) -> ({wall.x2}, {wall.y2})"
+        )
 
     # Vertical walls should have y1 < y2
     verticals = [w for w in result.wall_segments if abs(w.x2 - w.x1) < 0.1]
     for wall in verticals:
-        assert wall.y1 < wall.y2, f"Vertical wall not standardized: ({wall.x1}, {wall.y1}) -> ({wall.x2}, {wall.y2})"
+        assert wall.y1 < wall.y2, (
+            f"Vertical wall not standardized: ({wall.x1}, {wall.y1}) -> ({wall.x2}, {wall.y2})"
+        )
 
 
 def test_detect_walls_different_thickness_thresholds():
@@ -111,7 +126,9 @@ def test_detect_walls_different_thickness_thresholds():
         VectorLine(x1=0, y1=30, x2=100, y2=30, width=4.0),
     ]
 
-    extraction = ExtractionResult(lines=lines, page_width=800, page_height=600, metadata={})
+    extraction = ExtractionResult(
+        lines=lines, page_width=800, page_height=600, metadata={}
+    )
 
     # With threshold 0.5, should get all 4
     result = detect_walls(extraction, wall_thickness_min=0.5)
@@ -132,7 +149,9 @@ def test_detect_walls_different_thickness_thresholds():
 
 def test_detect_walls_empty_extraction():
     """Test wall detection with empty extraction (raster PDF)."""
-    extraction = ExtractionResult(lines=[], page_width=512, page_height=512, metadata={})
+    extraction = ExtractionResult(
+        lines=[], page_width=512, page_height=512, metadata={}
+    )
     result = detect_walls(extraction)
 
     assert result.total_wall_count == 0
@@ -143,6 +162,7 @@ def test_detect_walls_empty_extraction():
 # =============================================================================
 # VECTOR FLOORPLAN PDF TESTS
 # =============================================================================
+
 
 @pytest.mark.skipif(not VECTOR_PDF_PATHS, reason="No vector PDFs found")
 class TestVectorFloorplanWallDetection:
@@ -155,7 +175,9 @@ class TestVectorFloorplanWallDetection:
         result = detect_walls(extraction)
 
         # Real floorplans should have walls detected
-        assert result.total_wall_count > 0, f"No walls detected in {os.path.basename(pdf_path)}"
+        assert result.total_wall_count > 0, (
+            f"No walls detected in {os.path.basename(pdf_path)}"
+        )
         assert len(result.wall_segments) > 0
 
     @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
@@ -200,13 +222,15 @@ class TestVectorFloorplanWallDetection:
                 round(wall.y1, 2),
                 round(wall.x2, 2),
                 round(wall.y2, 2),
-                round(wall.thickness, 2)
+                round(wall.thickness, 2),
             )
             if key in wall_keys:
                 duplicates.append(key)
             wall_keys.add(key)
 
-        assert not duplicates, f"Found {len(duplicates)} duplicate walls in {os.path.basename(pdf_path)}"
+        assert not duplicates, (
+            f"Found {len(duplicates)} duplicate walls in {os.path.basename(pdf_path)}"
+        )
 
     @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
     def test_total_linear_feet_calculation_vector(self, pdf_path):
@@ -218,8 +242,9 @@ class TestVectorFloorplanWallDetection:
         expected_total = sum(wall.length_pts for wall in result.wall_segments)
 
         # Should match with small tolerance for floating point
-        assert abs(result.total_linear_pts - expected_total) < 0.01, \
+        assert abs(result.total_linear_pts - expected_total) < 0.01, (
             f"Total linear feet mismatch in {os.path.basename(pdf_path)}"
+        )
 
     def test_all_vector_floorplans_have_walls(self):
         """Verify all vector PDFs have detectable walls."""
@@ -267,6 +292,7 @@ class TestVectorFloorplanWallDetection:
 # RASTER FLOORPLAN PDF TESTS
 # =============================================================================
 
+
 @pytest.mark.skipif(not RASTER_PDF_PATHS, reason="No raster PDFs found")
 class TestRasterFloorplanWallDetection:
     """Wall detection tests using raster floorplan PDFs (expect no walls)."""
@@ -278,8 +304,9 @@ class TestRasterFloorplanWallDetection:
         result = detect_walls(extraction)
 
         # Raster PDFs have no vectors, so no walls should be detected
-        assert result.total_wall_count == 0, \
+        assert result.total_wall_count == 0, (
             f"Raster PDF {os.path.basename(pdf_path)} unexpectedly had walls"
+        )
         assert len(result.wall_segments) == 0
         assert result.total_linear_pts == 0.0
 
@@ -299,8 +326,9 @@ class TestRasterFloorplanWallDetection:
         """Test that all raster PDFs consistently return empty results."""
         for pdf_path in RASTER_PDF_PATHS:
             extraction = extract_vectors(pdf_path)
-            assert len(extraction.lines) == 0, \
+            assert len(extraction.lines) == 0, (
                 f"Raster PDF {os.path.basename(pdf_path)} had unexpected vectors"
+            )
 
             result = detect_walls(extraction)
             assert result.total_wall_count == 0

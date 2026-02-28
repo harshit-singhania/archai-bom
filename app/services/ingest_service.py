@@ -15,8 +15,8 @@ from dataclasses import dataclass
 from typing import IO
 
 from app.core.config import settings
-from app.services.floorplan_repository import create_floorplan
-from app.services.job_repository import create_job
+from app.repositories.floorplan_repository import create_floorplan
+from app.repositories.job_repository import create_job
 from app.workers.queue_worker import enqueue_ingest_job
 
 logger = logging.getLogger(__name__)

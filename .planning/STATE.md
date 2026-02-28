@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Sellable MVP
 status: in_progress
-last_updated: "2026-02-28T18:20:00Z"
+last_updated: "2026-02-28T19:00:00Z"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -15,7 +15,7 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-02-27)
+See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Core value:** Compress 3 weeks of manual construction estimating into a 3-minute API call  
 **Current focus:** Phase 3 — React SPA Shell + Upload Flow
@@ -24,8 +24,8 @@ See: `.planning/PROJECT.md` (updated 2026-02-27)
 
 Phase: 3 of 6 (React SPA — Shell + Upload Flow)  
 Plan: 0 of ? in current phase  
-Status: Phase 2 completed, ready for Phase 3 planning  
-Last activity: 2026-02-28 — Completed Phase 2 BOM calculator engine (Plans 01-03)
+Status: Phase 2 completed, MVC refactor completed, ready for Phase 3 planning  
+Last activity: 2026-02-28 — MVC architecture refactor (file moves + import updates + docs)
 
 Progress: [▓▓▓░░░░░░░] 33%
 
@@ -60,6 +60,7 @@ Recent decisions affecting current work:
 - [Phase 2]: Expanded seeded material catalog to 45 Indian-market items across 10 categories
 - [Phase 2]: Implemented pure `calculate_bom()` service (no AI, no DB, geometry-driven rules)
 - [Phase 2]: `_run_generate_job` now computes and persists priced BOM totals with graceful fallback to 0.0
+- [Post-Phase 2]: MVC refactor — separated repositories, integrations, and services into distinct layers
 
 Full decision log: `.planning/PROJECT.md` Key Decisions table
 
@@ -74,5 +75,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28  
-Stopped at: Phase 2 complete with summaries and tests passing  
-Resume file: `.planning/phases/02-bom-calculator-engine/02-bom-calculator-engine-03-SUMMARY.md`
+Stopped at: MVC refactor complete, docs updated, ready for Phase 3 planning  
+Resume file: `.planning/ROADMAP.md` — Phase 3 is next

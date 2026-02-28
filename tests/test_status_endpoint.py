@@ -5,12 +5,12 @@ from unittest.mock import patch
 
 from app.core import database as db_module
 from app.main import app
-from app.services.floorplan_repository import (
+from app.repositories.floorplan_repository import (
     create_floorplan,
     update_floorplan_status,
     update_floorplan_error,
 )
-from app.services.bom_repository import create_bom
+from app.repositories.bom_repository import create_bom
 
 # test_db fixture is provided by tests/conftest.py (Supabase-backed)
 

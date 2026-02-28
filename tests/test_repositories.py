@@ -76,20 +76,20 @@ def test_reset_engine():
 # REPOSITORY TESTS
 # =============================================================================
 
-from app.services.project_repository import (
+from app.repositories.project_repository import (
     create_project,
     get_project_by_id,
     list_projects,
     update_project_status,
 )
-from app.services.floorplan_repository import (
+from app.repositories.floorplan_repository import (
     create_floorplan,
     get_floorplan_by_id,
     list_floorplans_by_project,
     update_floorplan_status,
     update_floorplan_vector_data,
 )
-from app.services.bom_repository import (
+from app.repositories.bom_repository import (
     create_bom,
     get_bom_by_id,
     get_bom_by_floorplan,

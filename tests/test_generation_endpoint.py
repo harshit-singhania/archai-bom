@@ -38,8 +38,8 @@ def _request_payload() -> dict:
     }
 
 
-@patch("app.api.generate_service.enqueue_generate_job")
-@patch("app.api.generate_service.create_job")
+@patch("app.services.generate_service.enqueue_generate_job")
+@patch("app.services.generate_service.create_job")
 def test_generation_endpoint_success_returns_202(
     mock_create_job,
     mock_enqueue_generate_job,
@@ -71,8 +71,8 @@ def test_generation_endpoint_success_returns_202(
     mock_enqueue_generate_job.assert_called_once_with(42)
 
 
-@patch("app.api.generate_service.enqueue_generate_job")
-@patch("app.api.generate_service.create_job")
+@patch("app.services.generate_service.enqueue_generate_job")
+@patch("app.services.generate_service.create_job")
 def test_generation_endpoint_respects_overrides(
     mock_create_job,
     mock_enqueue_generate_job,
@@ -161,10 +161,10 @@ def test_generation_endpoint_invalid_floorplan_id_type_returns_400(client):
 
 
 @patch(
-    "app.api.generate_service.enqueue_generate_job",
+    "app.services.generate_service.enqueue_generate_job",
     side_effect=RuntimeError("queue down"),
 )
-@patch("app.api.generate_service.create_job", return_value=3)
+@patch("app.services.generate_service.create_job", return_value=3)
 def test_generation_endpoint_enqueue_failure_returns_500(
     mock_create_job,
     mock_enqueue_generate_job,

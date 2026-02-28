@@ -42,14 +42,21 @@ def test_create_returns_integer_id(test_db):
 
 ### API Contract Tests
 ```python
-@patch("app.api.routes.enqueue_job")
-@patch("app.api.routes.create_job")
+@patch("app.services.ingest_service.enqueue_ingest_job")
+@patch("app.services.ingest_service.create_job")
 def test_endpoint_returns_202(mock_create, mock_enqueue, client):
     """Async endpoints return 202 with job_id."""
     mock_create.return_value = 42
-    response = client.post("/api/v1/endpoint", json=payload)
+    response = client.post("/api/v1/ingest", ...)
     assert response.status_code == 202
 ```
+
+### Mock Patch Paths (MVC)
+After the MVC refactor, mock paths target where the name is **imported**, not defined:
+- Ingest mocks: `app.services.ingest_service.create_job`, `app.services.ingest_service.enqueue_ingest_job`
+- Generate mocks: `app.services.generate_service.create_job`, `app.services.generate_service.enqueue_generate_job`
+- Job runner mocks: `app.workers.job_runner.ingest_pdf`, `app.workers.job_runner.update_floorplan_*`
+- Integration mocks: `app.integrations.layout_generator.*`, `app.integrations.semantic_extractor.*`
 
 ### BOM Calculator Tests
 ```python

@@ -30,7 +30,7 @@ Concretely:
 - **No AI in the math layer:** BOM calculation is deterministic rules, not LLM generation. Construction math cannot hallucinate.
 - **Indian market first:** All pricing, materials, units in Indian context (₹, sqft, mm).
 
-## What's Built (Phase 1 — Concerns Remediation, Complete)
+## What's Built (Phases 1-2 + MVC Refactor, Complete)
 
 - PDF ingestion → wall/room detection (vector + raster Gemini fallback)
 - Gemini-powered layout generation with constraint validation, retry, adaptive fanout
@@ -39,12 +39,12 @@ Concretely:
 - Async job queue (Redis/RQ) — non-blocking 202 API
 - Security layer (API key auth, CORS, rate limiting, payload guards)
 - Deterministic dependency management (pip-tools lockfile)
+- Deterministic BOM calculator (geometry → priced material line items, 45 Indian-market materials)
+- MVC architecture: Controllers → Services → Repositories/Integrations (clean layer separation)
 - 2100+ tests passing against real Supabase
 
 ## What's NOT Built (MVP Gaps)
 
-- BOM calculator (geometry → material quantities × prices)
-- Materials pricing engine (table exists, nothing consumes it)
 - Frontend (no UI at all)
 - Export (no PDF/Excel download)
 - End-to-end connected flow
@@ -68,6 +68,7 @@ Concretely:
 | 3 | Deterministic BOM calculator (zero AI) | Construction math cannot hallucinate | 2026-02-27 |
 | 4 | No auth in frontend for MVP | Demo-only, API key hardcoded | 2026-02-27 |
 | 5 | SQLite test fixtures replaced with real Supabase | Production parity in tests | 2026-02-27 |
+| 6 | MVC architecture refactor | Clean layer separation: api/ → services/ → repositories/integrations/ | 2026-02-28 |
 
 ---
-*Updated: 2026-02-27*
+*Updated: 2026-02-28*

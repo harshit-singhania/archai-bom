@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from app.models.semantic import SemanticResult, RoomLabel, ScaleInfo
-from app.services.semantic_extractor import extract_semantics
+from app.integrations.semantic_extractor import extract_semantics
 from tests.conftest import get_categorized_pdf_paths
 
 
@@ -19,15 +19,15 @@ VECTOR_PDF_NAMES = [os.path.basename(p) for p in VECTOR_PDF_PATHS]
 RASTER_PDF_NAMES = [os.path.basename(p) for p in RASTER_PDF_PATHS]
 
 
-@patch("app.services.semantic_extractor.genai.Client")
-@patch("app.services.semantic_extractor.fitz.open")
+@patch("app.integrations.semantic_extractor.genai.Client")
+@patch("app.integrations.semantic_extractor.fitz.open")
 def test_extract_semantics_success(
     mock_fitz_open, mock_genai_client, monkeypatch, capsys
 ):
     """Test successful semantic extraction via mocked Gemini API."""
     # Setup mock config
     monkeypatch.setattr(
-        "app.services.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
+        "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
     )
 
     # Setup mock PDF
@@ -79,7 +79,9 @@ def test_extract_semantics_success(
 
 def test_extract_semantics_no_api_key(monkeypatch):
     """Test behavior when GOOGLE_API_KEY is not set."""
-    monkeypatch.setattr("app.services.semantic_extractor.settings.GOOGLE_API_KEY", "")
+    monkeypatch.setattr(
+        "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", ""
+    )
 
     result = extract_semantics("fake_path.pdf")
 
@@ -89,11 +91,11 @@ def test_extract_semantics_no_api_key(monkeypatch):
     assert len(result.raw_text) == 0
 
 
-@patch("app.services.semantic_extractor.fitz.open")
+@patch("app.integrations.semantic_extractor.fitz.open")
 def test_extract_semantics_invalid_pdf(mock_fitz_open, monkeypatch):
     """Test behavior when PDF processing fails."""
     monkeypatch.setattr(
-        "app.services.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
+        "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
     )
 
     # Make fitz.open raise an exception
@@ -114,14 +116,14 @@ def test_extract_semantics_invalid_pdf(mock_fitz_open, monkeypatch):
 class TestRealPDFSemanticExtraction:
     """Semantic extraction tests using real PDFs with mocked Gemini API."""
 
-    @patch("app.services.semantic_extractor.genai.Client")
+    @patch("app.integrations.semantic_extractor.genai.Client")
     @pytest.mark.parametrize("pdf_path", ALL_PDF_PATHS, ids=ALL_PDF_NAMES)
     def test_extract_semantics_real_pdf_structure(
         self, mock_genai_client, pdf_path, monkeypatch
     ):
         """Test that semantic extraction processes real PDFs correctly."""
         monkeypatch.setattr(
-            "app.services.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
+            "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
         )
 
         # Setup mock Gemini response
@@ -164,7 +166,7 @@ class TestRealPDFSemanticExtraction:
     def test_extract_semantics_real_pdf_no_api_key(self, pdf_path, monkeypatch):
         """Test graceful degradation when API key is missing."""
         monkeypatch.setattr(
-            "app.services.semantic_extractor.settings.GOOGLE_API_KEY", ""
+            "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", ""
         )
 
         result = extract_semantics(pdf_path)
@@ -175,13 +177,13 @@ class TestRealPDFSemanticExtraction:
         assert result.scale is None
         assert len(result.raw_text) == 0
 
-    @patch("app.services.semantic_extractor.genai.Client")
+    @patch("app.integrations.semantic_extractor.genai.Client")
     def test_extract_semantics_all_pdfs_processable(
         self, mock_genai_client, monkeypatch
     ):
         """Verify all sample PDFs can be processed for semantic extraction."""
         monkeypatch.setattr(
-            "app.services.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
+            "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
         )
 
         # Setup mock
@@ -226,7 +228,7 @@ class TestRealPDFSemanticExtraction:
 class TestVectorPDFSemanticExtraction:
     """Semantic extraction tests for vector PDFs."""
 
-    @patch("app.services.semantic_extractor.genai.Client")
+    @patch("app.integrations.semantic_extractor.genai.Client")
     @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
     def test_vector_pdf_image_extraction(
         self, mock_genai_client, pdf_path, monkeypatch
@@ -235,7 +237,7 @@ class TestVectorPDFSemanticExtraction:
         import fitz
 
         monkeypatch.setattr(
-            "app.services.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
+            "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
         )
 
         # Setup mock
@@ -266,7 +268,7 @@ class TestVectorPDFSemanticExtraction:
 class TestRasterPDFSemanticExtraction:
     """Semantic extraction tests for raster PDFs."""
 
-    @patch("app.services.semantic_extractor.genai.Client")
+    @patch("app.integrations.semantic_extractor.genai.Client")
     @pytest.mark.parametrize("pdf_path", RASTER_PDF_PATHS, ids=RASTER_PDF_NAMES)
     def test_raster_pdf_image_extraction(
         self, mock_genai_client, pdf_path, monkeypatch
@@ -275,7 +277,7 @@ class TestRasterPDFSemanticExtraction:
         import fitz
 
         monkeypatch.setattr(
-            "app.services.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
+            "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
         )
 
         # Setup mock
@@ -301,13 +303,13 @@ class TestRasterPDFSemanticExtraction:
         result = extract_semantics(pdf_path)
         assert isinstance(result, SemanticResult)
 
-    @patch("app.services.semantic_extractor.genai.Client")
+    @patch("app.integrations.semantic_extractor.genai.Client")
     def test_raster_pdfs_suitable_for_vision_api(self, mock_genai_client, monkeypatch):
         """Test that raster PDFs (converted from PNGs) work well with vision API."""
         import fitz
 
         monkeypatch.setattr(
-            "app.services.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
+            "app.integrations.semantic_extractor.settings.GOOGLE_API_KEY", "test_key"
         )
 
         # Setup mock

@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from app.models.geometry import WallDetectionResult, WallSegment
-from app.services.raster_wall_extractor import (
+from app.integrations.raster_wall_extractor import (
     extract_walls_from_raster,
     _convert_to_wall_segments,
     _WallSegmentPx,
@@ -18,11 +18,16 @@ from app.services.raster_wall_extractor import (
 # Unit tests (fully mocked)
 # ---------------------------------------------------------------------------
 
-@patch("app.services.raster_wall_extractor.genai.Client")
-@patch("app.services.raster_wall_extractor.fitz.open")
-def test_extract_walls_from_raster_success(mock_fitz_open, mock_genai_client, monkeypatch):
+
+@patch("app.integrations.raster_wall_extractor.genai.Client")
+@patch("app.integrations.raster_wall_extractor.fitz.open")
+def test_extract_walls_from_raster_success(
+    mock_fitz_open, mock_genai_client, monkeypatch
+):
     """Happy path: Gemini returns valid wall segments."""
-    monkeypatch.setattr("app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key")
+    monkeypatch.setattr(
+        "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
+    )
 
     # Mock PDF rasterization
     mock_doc = MagicMock()
@@ -70,27 +75,35 @@ def test_extract_walls_from_raster_success(mock_fitz_open, mock_genai_client, mo
 
 def test_extract_walls_from_raster_no_api_key(monkeypatch):
     """Missing GOOGLE_API_KEY raises RuntimeError."""
-    monkeypatch.setattr("app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "")
+    monkeypatch.setattr(
+        "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", ""
+    )
 
     with pytest.raises(RuntimeError, match="GOOGLE_API_KEY"):
         extract_walls_from_raster("fake.pdf")
 
 
-@patch("app.services.raster_wall_extractor.fitz.open")
+@patch("app.integrations.raster_wall_extractor.fitz.open")
 def test_extract_walls_from_raster_bad_pdf(mock_fitz_open, monkeypatch):
     """Corrupted PDF raises ValueError."""
-    monkeypatch.setattr("app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key")
+    monkeypatch.setattr(
+        "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
+    )
     mock_fitz_open.side_effect = Exception("Corrupted PDF")
 
     with pytest.raises(ValueError, match="Failed to rasterize PDF page"):
         extract_walls_from_raster("fake.pdf")
 
 
-@patch("app.services.raster_wall_extractor.genai.Client")
-@patch("app.services.raster_wall_extractor.fitz.open")
-def test_extract_walls_from_raster_gemini_failure(mock_fitz_open, mock_genai_client, monkeypatch):
+@patch("app.integrations.raster_wall_extractor.genai.Client")
+@patch("app.integrations.raster_wall_extractor.fitz.open")
+def test_extract_walls_from_raster_gemini_failure(
+    mock_fitz_open, mock_genai_client, monkeypatch
+):
     """Gemini API failure raises RuntimeError."""
-    monkeypatch.setattr("app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key")
+    monkeypatch.setattr(
+        "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
+    )
 
     mock_doc = MagicMock()
     mock_page = MagicMock()
@@ -109,11 +122,15 @@ def test_extract_walls_from_raster_gemini_failure(mock_fitz_open, mock_genai_cli
         extract_walls_from_raster("fake.pdf")
 
 
-@patch("app.services.raster_wall_extractor.genai.Client")
-@patch("app.services.raster_wall_extractor.fitz.open")
-def test_extract_walls_from_raster_empty_response(mock_fitz_open, mock_genai_client, monkeypatch):
+@patch("app.integrations.raster_wall_extractor.genai.Client")
+@patch("app.integrations.raster_wall_extractor.fitz.open")
+def test_extract_walls_from_raster_empty_response(
+    mock_fitz_open, mock_genai_client, monkeypatch
+):
     """Gemini returns no walls — result is valid but empty."""
-    monkeypatch.setattr("app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key")
+    monkeypatch.setattr(
+        "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
+    )
 
     mock_doc = MagicMock()
     mock_page = MagicMock()
@@ -138,11 +155,15 @@ def test_extract_walls_from_raster_empty_response(mock_fitz_open, mock_genai_cli
     assert result.wall_segments == []
 
 
-@patch("app.services.raster_wall_extractor.genai.Client")
-@patch("app.services.raster_wall_extractor.fitz.open")
-def test_extract_walls_from_raster_none_parsed(mock_fitz_open, mock_genai_client, monkeypatch):
+@patch("app.integrations.raster_wall_extractor.genai.Client")
+@patch("app.integrations.raster_wall_extractor.fitz.open")
+def test_extract_walls_from_raster_none_parsed(
+    mock_fitz_open, mock_genai_client, monkeypatch
+):
     """Gemini returns None parsed result — treated as empty."""
-    monkeypatch.setattr("app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key")
+    monkeypatch.setattr(
+        "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
+    )
 
     mock_doc = MagicMock()
     mock_page = MagicMock()
@@ -163,10 +184,12 @@ def test_extract_walls_from_raster_none_parsed(mock_fitz_open, mock_genai_client
     assert result.total_wall_count == 0
 
 
-@patch("app.services.raster_wall_extractor.fitz.open")
+@patch("app.integrations.raster_wall_extractor.fitz.open")
 def test_extract_walls_from_raster_invalid_page(mock_fitz_open, monkeypatch):
     """Requesting a page beyond the document length raises ValueError."""
-    monkeypatch.setattr("app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key")
+    monkeypatch.setattr(
+        "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
+    )
 
     mock_doc = MagicMock()
     mock_doc.__len__.return_value = 1
@@ -179,6 +202,7 @@ def test_extract_walls_from_raster_invalid_page(mock_fitz_open, monkeypatch):
 # ---------------------------------------------------------------------------
 # Unit tests for _convert_to_wall_segments helper
 # ---------------------------------------------------------------------------
+
 
 def test_convert_to_wall_segments_basic():
     """Pixel coordinates are divided by scale and converted to WallSegments."""
@@ -235,6 +259,7 @@ SAMPLE_PDFS_DIR = os.path.join(os.path.dirname(__file__), "..", "sample_pdfs")
 
 def _get_raster_pdfs():
     import fitz
+
     paths = []
     for f in os.listdir(SAMPLE_PDFS_DIR):
         if not f.endswith(".pdf"):
@@ -258,12 +283,14 @@ RASTER_PDF_NAMES = [os.path.basename(p) for p in RASTER_PDF_PATHS]
 class TestRasterPDFExtraction:
     """Integration tests using real raster PDFs with mocked Gemini."""
 
-    @patch("app.services.raster_wall_extractor.genai.Client")
+    @patch("app.integrations.raster_wall_extractor.genai.Client")
     @pytest.mark.parametrize("pdf_path", RASTER_PDF_PATHS, ids=RASTER_PDF_NAMES)
-    def test_raster_pdf_extracts_successfully(self, mock_genai_client, pdf_path, monkeypatch):
+    def test_raster_pdf_extracts_successfully(
+        self, mock_genai_client, pdf_path, monkeypatch
+    ):
         """Real raster PDFs can be processed end-to-end (mocked Gemini)."""
         monkeypatch.setattr(
-            "app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
+            "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
         )
 
         mock_client = MagicMock()
@@ -286,13 +313,13 @@ class TestRasterPDFExtraction:
         assert result.total_wall_count == 2
         assert mock_client.models.generate_content.called
 
-    @patch("app.services.raster_wall_extractor.genai.Client")
+    @patch("app.integrations.raster_wall_extractor.genai.Client")
     def test_all_raster_pdfs_can_be_rasterized(self, mock_genai_client, monkeypatch):
         """All raster PDFs can be opened and converted to PNG without errors."""
         import fitz
 
         monkeypatch.setattr(
-            "app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
+            "app.integrations.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
         )
 
         mock_client = MagicMock()

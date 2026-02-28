@@ -11,7 +11,7 @@ from app.models.layout import GeneratedLayout
 from app.models.spatial import SpatialGraph
 from app.services.constraint_checker import validate_layout
 from app.services.grid_snapper import snap_layout_to_grid
-from app.services.layout_generator import generate_layout
+from app.integrations.layout_generator import generate_layout
 
 logger = logging.getLogger(__name__)
 

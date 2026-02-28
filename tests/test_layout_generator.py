@@ -7,7 +7,7 @@ import pytest
 from app.models.geometry import WallSegment
 from app.models.layout import GeneratedLayout
 from app.models.spatial import Room, SpatialGraph
-from app.services.layout_generator import (
+from app.integrations.layout_generator import (
     _call_gemini_with_retry,
     _call_gemini_with_timeout,
     generate_layout,
@@ -128,12 +128,12 @@ def _generated_layout_payload() -> dict:
     }
 
 
-@patch("app.services.layout_generator.genai.Client")
+@patch("app.integrations.layout_generator.genai.Client")
 def test_generate_layout_success(mock_genai_client, monkeypatch):
     """generate_layout returns a validated GeneratedLayout from mocked Gemini response."""
 
     monkeypatch.setattr(
-        "app.services.layout_generator.settings.GOOGLE_API_KEY", "test_key"
+        "app.integrations.layout_generator.settings.GOOGLE_API_KEY", "test_key"
     )
 
     mock_client = MagicMock()
@@ -161,14 +161,14 @@ def test_generate_layout_success(mock_genai_client, monkeypatch):
     assert config.response_schema is None
 
 
-@patch("app.services.layout_generator.genai.Client")
+@patch("app.integrations.layout_generator.genai.Client")
 def test_generate_layout_malformed_response_raises_value_error(
     mock_genai_client, monkeypatch
 ):
     """Malformed Gemini response should raise ValueError."""
 
     monkeypatch.setattr(
-        "app.services.layout_generator.settings.GOOGLE_API_KEY", "test_key"
+        "app.integrations.layout_generator.settings.GOOGLE_API_KEY", "test_key"
     )
 
     mock_client = MagicMock()
@@ -183,14 +183,14 @@ def test_generate_layout_malformed_response_raises_value_error(
         generate_layout(spatial_graph=_simple_spatial_graph(), prompt="simple clinic")
 
 
-@patch("app.services.layout_generator.genai.Client")
+@patch("app.integrations.layout_generator.genai.Client")
 def test_generate_layout_scale_factor_one_uses_mm_fallback(
     mock_genai_client, monkeypatch
 ):
     """scale_factor=1.0 should use 1pt=1mm fallback, not feet conversion."""
 
     monkeypatch.setattr(
-        "app.services.layout_generator.settings.GOOGLE_API_KEY", "test_key"
+        "app.integrations.layout_generator.settings.GOOGLE_API_KEY", "test_key"
     )
 
     mock_client = MagicMock()
@@ -213,8 +213,8 @@ def test_generate_layout_scale_factor_one_uses_mm_fallback(
 # --- Timeout / Retry / Backoff tests ---
 
 
-@patch("app.services.layout_generator._call_gemini_with_timeout")
-@patch("app.services.layout_generator.time.sleep")
+@patch("app.integrations.layout_generator._call_gemini_with_timeout")
+@patch("app.integrations.layout_generator.time.sleep")
 def test_retry_succeeds_after_transient_failure(mock_sleep, mock_timeout_call):
     """Transient RuntimeError on first attempt should retry and succeed."""
 
@@ -237,8 +237,8 @@ def test_retry_succeeds_after_transient_failure(mock_sleep, mock_timeout_call):
     mock_sleep.assert_called_once()
 
 
-@patch("app.services.layout_generator._call_gemini_with_timeout")
-@patch("app.services.layout_generator.time.sleep")
+@patch("app.integrations.layout_generator._call_gemini_with_timeout")
+@patch("app.integrations.layout_generator.time.sleep")
 def test_retry_exhaustion_raises_runtime_error(mock_sleep, mock_timeout_call):
     """After all retries exhausted, RuntimeError should propagate."""
 
@@ -261,8 +261,8 @@ def test_retry_exhaustion_raises_runtime_error(mock_sleep, mock_timeout_call):
     assert mock_sleep.call_count == 2
 
 
-@patch("app.services.layout_generator._call_gemini_with_timeout")
-@patch("app.services.layout_generator.time.sleep")
+@patch("app.integrations.layout_generator._call_gemini_with_timeout")
+@patch("app.integrations.layout_generator.time.sleep")
 def test_non_transient_exception_not_retried(mock_sleep, mock_timeout_call):
     """Non-RuntimeError SDK exceptions should not be retried."""
 
@@ -284,8 +284,8 @@ def test_non_transient_exception_not_retried(mock_sleep, mock_timeout_call):
     mock_sleep.assert_not_called()
 
 
-@patch("app.services.layout_generator._call_gemini_with_timeout")
-@patch("app.services.layout_generator.time.sleep")
+@patch("app.integrations.layout_generator._call_gemini_with_timeout")
+@patch("app.integrations.layout_generator.time.sleep")
 def test_exponential_backoff_delays_increase(mock_sleep, mock_timeout_call):
     """Backoff delays should double each retry attempt."""
 
@@ -307,8 +307,8 @@ def test_exponential_backoff_delays_increase(mock_sleep, mock_timeout_call):
     assert sleep_calls == [1.0, 2.0, 4.0]
 
 
-@patch("app.services.layout_generator._call_gemini_with_timeout")
-@patch("app.services.layout_generator.time.sleep")
+@patch("app.integrations.layout_generator._call_gemini_with_timeout")
+@patch("app.integrations.layout_generator.time.sleep")
 def test_backoff_delay_capped_at_max(mock_sleep, mock_timeout_call):
     """Backoff delay should not exceed max_delay."""
 
@@ -331,24 +331,24 @@ def test_backoff_delay_capped_at_max(mock_sleep, mock_timeout_call):
     assert sleep_calls[2] == 3.0
 
 
-@patch("app.services.layout_generator.genai.Client")
+@patch("app.integrations.layout_generator.genai.Client")
 def test_generate_layout_uses_config_timeout_retry(mock_genai_client, monkeypatch):
     """generate_layout passes config timeout/retry values to the retry wrapper."""
 
     monkeypatch.setattr(
-        "app.services.layout_generator.settings.GOOGLE_API_KEY", "test_key"
+        "app.integrations.layout_generator.settings.GOOGLE_API_KEY", "test_key"
     )
     monkeypatch.setattr(
-        "app.services.layout_generator.settings.GENERATION_TIMEOUT_SECONDS", 45.0
+        "app.integrations.layout_generator.settings.GENERATION_TIMEOUT_SECONDS", 45.0
     )
     monkeypatch.setattr(
-        "app.services.layout_generator.settings.GENERATION_MAX_RETRIES", 1
+        "app.integrations.layout_generator.settings.GENERATION_MAX_RETRIES", 1
     )
     monkeypatch.setattr(
-        "app.services.layout_generator.settings.GENERATION_RETRY_BASE_DELAY", 0.5
+        "app.integrations.layout_generator.settings.GENERATION_RETRY_BASE_DELAY", 0.5
     )
     monkeypatch.setattr(
-        "app.services.layout_generator.settings.GENERATION_RETRY_MAX_DELAY", 10.0
+        "app.integrations.layout_generator.settings.GENERATION_RETRY_MAX_DELAY", 10.0
     )
 
     mock_client = MagicMock()
@@ -359,9 +359,9 @@ def test_generate_layout_uses_config_timeout_retry(mock_genai_client, monkeypatc
     mock_client.models.generate_content.return_value = mock_response
 
     with patch(
-        "app.services.layout_generator._call_gemini_with_retry",
+        "app.integrations.layout_generator._call_gemini_with_retry",
         wraps=__import__(
-            "app.services.layout_generator", fromlist=["_call_gemini_with_retry"]
+            "app.integrations.layout_generator", fromlist=["_call_gemini_with_retry"]
         )._call_gemini_with_retry,
     ) as mock_retry:
         result = generate_layout(

@@ -16,7 +16,7 @@ from pydantic import ValidationError
 
 from app.core.config import settings
 from app.models.spatial import SpatialGraph
-from app.services.job_repository import create_job
+from app.repositories.job_repository import create_job
 from app.workers.queue_worker import enqueue_generate_job
 
 logger = logging.getLogger(__name__)

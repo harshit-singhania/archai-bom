@@ -16,12 +16,12 @@ import logging
 from typing import Any, Dict, Optional
 
 from app.services.ingestion_pipeline import ingest_pdf
-from app.services.floorplan_repository import (
+from app.repositories.floorplan_repository import (
     update_floorplan_error,
     update_floorplan_status,
     update_floorplan_vector_data,
 )
-from app.services.job_repository import (
+from app.repositories.job_repository import (
     get_job_by_id,
     mark_job_failed,
     mark_job_running,
@@ -144,8 +144,8 @@ def _run_generate_job(job: Dict[str, Any]) -> Dict[str, Any]:
     from app.models.spatial import SpatialGraph
     from app.services.bom_calculator import calculate_bom
     from app.services.generation_pipeline import generate_validated_layout
-    from app.services.bom_repository import create_bom
-    from app.services.materials_repository import get_all_materials
+    from app.repositories.bom_repository import create_bom
+    from app.repositories.materials_repository import get_all_materials
 
     payload = _parse_payload(job)
     spatial_graph_data = payload["spatial_graph"]

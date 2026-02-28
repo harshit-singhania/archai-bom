@@ -4,7 +4,7 @@ import os
 import pytest
 import fitz  # PyMuPDF
 
-from app.services.pdf_extractor import extract_vectors, extract_summary
+from app.integrations.pdf_extractor import extract_vectors, extract_summary
 from app.models.geometry import VectorLine, ExtractionResult
 from tests.conftest import (
     get_categorized_pdf_paths,
@@ -228,6 +228,7 @@ class TestExtractSummary:
 # VECTOR FLOORPLAN PDF TESTS
 # =============================================================================
 
+
 @pytest.mark.skipif(not VECTOR_PDF_PATHS, reason="No vector PDFs found")
 class TestVectorFloorplanPDFs:
     """Tests using vector-based floorplan PDFs (have drawings)."""
@@ -310,6 +311,7 @@ class TestVectorFloorplanPDFs:
 # RASTER (SCANNED) PDF TESTS
 # =============================================================================
 
+
 @pytest.mark.skipif(not RASTER_PDF_PATHS, reason="No raster PDFs found")
 class TestRasterFloorplanPDFs:
     """Tests using raster-based floorplan PDFs (images only, no vectors)."""
@@ -351,8 +353,12 @@ class TestRasterFloorplanPDFs:
         for pdf_path in RASTER_PDF_PATHS:
             result = extract_vectors(pdf_path)
 
-            assert result.page_width > 0, f"Invalid width in {os.path.basename(pdf_path)}"
-            assert result.page_height > 0, f"Invalid height in {os.path.basename(pdf_path)}"
+            assert result.page_width > 0, (
+                f"Invalid width in {os.path.basename(pdf_path)}"
+            )
+            assert result.page_height > 0, (
+                f"Invalid height in {os.path.basename(pdf_path)}"
+            )
 
     def test_raster_pdf_summary_consistency(self):
         """Test consistency of raster PDF summaries."""
@@ -360,12 +366,14 @@ class TestRasterFloorplanPDFs:
 
         for pdf_path in RASTER_PDF_PATHS:
             summary = extract_summary(pdf_path)
-            summaries.append({
-                "name": os.path.basename(pdf_path),
-                "lines": summary["total_lines"],
-                "width": summary["page_dimensions"][0],
-                "height": summary["page_dimensions"][1],
-            })
+            summaries.append(
+                {
+                    "name": os.path.basename(pdf_path),
+                    "lines": summary["total_lines"],
+                    "width": summary["page_dimensions"][0],
+                    "height": summary["page_dimensions"][1],
+                }
+            )
 
         # All should have 0 lines
         for s in summaries:
@@ -382,6 +390,7 @@ class TestRasterFloorplanPDFs:
 # =============================================================================
 # PDF CATEGORIZATION TESTS
 # =============================================================================
+
 
 class TestPDFCategorization:
     """Tests for PDF type categorization."""
@@ -403,5 +412,6 @@ class TestPDFCategorization:
     def test_all_pdfs_categorized(self):
         """Verify all PDFs are categorized."""
         total_categorized = len(VECTOR_PDF_PATHS) + len(RASTER_PDF_PATHS)
-        assert total_categorized == len(ALL_PDF_PATHS), \
+        assert total_categorized == len(ALL_PDF_PATHS), (
             f"Mismatch: {total_categorized} categorized vs {len(ALL_PDF_PATHS)} total"
+        )
