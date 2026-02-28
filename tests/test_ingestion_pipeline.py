@@ -1,8 +1,16 @@
-"""Tests for the integrated ingestion pipeline."""
+"""Tests for the integrated ingestion pipeline.
 
+The /api/v1/ingest endpoint uses an async enqueue model — it returns 202 Accepted
+immediately with a job_id and status_url. The heavy PDF extraction runs in a
+background worker. These tests verify the API contract, not the worker behaviour.
+"""
+
+import io
 import os
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from app.main import app
 from tests.conftest import get_categorized_pdf_paths
 
@@ -25,6 +33,11 @@ def client():
         yield client
 
 
+# ---------------------------------------------------------------------------
+# Basic smoke / validation tests (no PDF required)
+# ---------------------------------------------------------------------------
+
+
 def test_health_endpoint(client):
     """Test the health check endpoint."""
     response = client.get("/health")
@@ -43,8 +56,29 @@ def test_root_endpoint(client):
     assert "ArchAI BOM" in data["message"]
 
 
-def test_api_ingest_endpoint(client):
-    """Test the /api/v1/ingest API endpoint with default test file."""
+def test_api_ingest_endpoint_no_file(client):
+    """Endpoint returns 400 when no file is provided."""
+    response = client.post("/api/v1/ingest")
+    assert response.status_code == 400
+    assert "No file provided" in response.get_json()["error"]
+
+
+def test_api_ingest_endpoint_invalid_file(client):
+    """Endpoint returns 400 for non-PDF uploads."""
+    data = {"file": (io.BytesIO(b"dummy content"), "test_floorplan.txt")}
+    response = client.post(
+        "/api/v1/ingest",
+        data=data,
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 400
+    assert "must be a PDF" in response.get_json()["error"]
+
+
+@patch("app.api.routes.enqueue_ingest_job")
+@patch("app.api.routes.create_job", return_value=99)
+def test_api_ingest_endpoint_returns_202(mock_create_job, mock_enqueue, client):
+    """Valid PDF upload enqueues a job and returns the 202 async contract."""
     pdf_path = "sample_pdfs/vector/test_floorplan.pdf"
 
     if not os.path.exists(pdf_path):
@@ -54,239 +88,133 @@ def test_api_ingest_endpoint(client):
         response = client.post(
             "/api/v1/ingest",
             data={"file": (f, "test_floorplan.pdf")},
-            content_type="multipart/form-data"
+            content_type="multipart/form-data",
         )
 
-    assert response.status_code == 200
+    assert response.status_code == 202
     data = response.get_json()
-    assert "total_wall_count" in data
-    assert "wall_segments" in data
-    assert data["total_wall_count"] > 0
+    assert data["job_id"] == 99
+    assert data["status"] == "queued"
+    assert data["status_url"] == "/api/v1/jobs/99"
 
+    mock_create_job.assert_called_once()
+    call_kwargs = mock_create_job.call_args.kwargs
+    assert call_kwargs["job_type"] == "ingest"
 
-def test_api_ingest_endpoint_invalid_file(client):
-    """Test endpoint with non-PDF file."""
-    import io
-
-    data = {
-        "file": (io.BytesIO(b"dummy content"), "test_floorplan.txt")
-    }
-    response = client.post(
-        "/api/v1/ingest",
-        data=data,
-        content_type="multipart/form-data"
-    )
-
-    assert response.status_code == 400
-    assert "must be a PDF" in response.get_json()["error"]
-
-
-def test_api_ingest_endpoint_no_file(client):
-    """Test endpoint with no file."""
-    response = client.post("/api/v1/ingest")
-    assert response.status_code == 400
-    assert "No file provided" in response.get_json()["error"]
+    mock_enqueue.assert_called_once_with(99)
 
 
 # =============================================================================
 # VECTOR PDF INGESTION TESTS
 # =============================================================================
 
+
 @pytest.mark.skipif(not VECTOR_PDF_PATHS, reason="No vector PDFs found")
 class TestVectorPDFIngestion:
-    """Ingestion tests using vector-based PDFs."""
+    """Ingestion API contract tests using vector-based PDFs.
 
+    The endpoint does not process the PDF inline — it enqueues a background job
+    and returns 202 immediately.  All tests mock create_job / enqueue_ingest_job
+    and verify the async response shape only.
+    """
+
+    @patch("app.api.routes.enqueue_ingest_job")
+    @patch("app.api.routes.create_job")
     @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
-    def test_ingest_vector_floorplan(self, client, pdf_path):
-        """Test ingestion endpoint with each vector floorplan PDF."""
+    def test_ingest_vector_floorplan_returns_202(
+        self, mock_create_job, mock_enqueue, client, pdf_path
+    ):
+        """Each vector PDF upload receives a 202 with a job_id."""
+        mock_create_job.return_value = 1
         pdf_name = os.path.basename(pdf_path)
 
         with open(pdf_path, "rb") as f:
             response = client.post(
                 "/api/v1/ingest",
                 data={"file": (f, pdf_name)},
-                content_type="multipart/form-data"
+                content_type="multipart/form-data",
             )
 
-        assert response.status_code == 200, f"Failed to ingest {pdf_name}: {response.get_json()}"
-
+        assert response.status_code == 202, (
+            f"Expected 202 for {pdf_name}, got {response.status_code}: {response.get_json()}"
+        )
         data = response.get_json()
+        assert "job_id" in data
+        assert data["status"] == "queued"
+        assert "status_url" in data
+        assert data["status_url"] == f"/api/v1/jobs/{data['job_id']}"
 
-        # Verify response structure
-        assert "total_wall_count" in data
-        assert "total_linear_pts" in data
-        assert "wall_segments" in data
-
-        # Vector floorplans should have walls
-        assert data["total_wall_count"] > 0, f"No walls detected in {pdf_name}"
-        assert len(data["wall_segments"]) > 0
-
-        # Verify wall segment structure
-        for wall in data["wall_segments"]:
-            assert "x1" in wall
-            assert "y1" in wall
-            assert "x2" in wall
-            assert "y2" in wall
-            assert "length_pts" in wall
-            assert "thickness" in wall
-
-    @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
-    def test_ingest_vector_response_page_dimensions(self, client, pdf_path):
-        """Test that page dimensions are returned correctly for vector PDFs."""
-        pdf_name = os.path.basename(pdf_path)
-
-        with open(pdf_path, "rb") as f:
-            response = client.post(
-                "/api/v1/ingest",
-                data={"file": (f, pdf_name)},
-                content_type="multipart/form-data"
-            )
-
-        data = response.get_json()
-
-        # Verify wall segments have required fields
-        assert len(data["wall_segments"]) > 0
-        for wall in data["wall_segments"]:
-            assert "x1" in wall
-            assert "y1" in wall
-            assert "x2" in wall
-            assert "y2" in wall
-
-    def test_all_vector_floorplans_ingest_successfully(self, client):
-        """Verify all vector PDFs can be ingested without errors."""
+    @patch("app.api.routes.enqueue_ingest_job")
+    @patch("app.api.routes.create_job")
+    def test_all_vector_floorplans_enqueue_successfully(
+        self, mock_create_job, mock_enqueue, client
+    ):
+        """All vector PDFs trigger a job enqueue without errors."""
+        mock_create_job.return_value = 1
         failed_pdfs = []
-        success_count = 0
 
         for pdf_path in VECTOR_PDF_PATHS:
             pdf_name = os.path.basename(pdf_path)
-
             try:
                 with open(pdf_path, "rb") as f:
                     response = client.post(
                         "/api/v1/ingest",
                         data={"file": (f, pdf_name)},
-                        content_type="multipart/form-data"
+                        content_type="multipart/form-data",
                     )
+                if response.status_code != 202:
+                    failed_pdfs.append(
+                        (pdf_name, response.status_code, response.get_json())
+                    )
+            except Exception as exc:
+                failed_pdfs.append((pdf_name, "exception", str(exc)))
 
-                if response.status_code != 200:
-                    failed_pdfs.append((pdf_name, response.status_code, response.get_json()))
-                else:
-                    success_count += 1
-            except Exception as e:
-                failed_pdfs.append((pdf_name, "exception", str(e)))
+        assert not failed_pdfs, (
+            f"{len(failed_pdfs)} vector PDF(s) failed to enqueue:\n"
+            + "\n".join(f"  {n}: {c} — {m}" for n, c, m in failed_pdfs)
+        )
 
-        if failed_pdfs:
-            print(f"\nFailed vector PDFs:")
-            for name, code, msg in failed_pdfs:
-                print(f"  {name}: {code} - {msg}")
-
-        assert not failed_pdfs, f"{len(failed_pdfs)} vector PDFs failed to ingest"
-        assert success_count == len(VECTOR_PDF_PATHS)
-
-    def test_vector_wall_detection_consistency(self, client):
-        """Test that wall detection is consistent across vector floorplans."""
-        results = []
+    @patch("app.api.routes.enqueue_ingest_job")
+    @patch("app.api.routes.create_job")
+    def test_vector_ingest_enqueue_called_per_pdf(
+        self, mock_create_job, mock_enqueue, client
+    ):
+        """enqueue_ingest_job is called exactly once per successful upload."""
+        mock_create_job.return_value = 1
 
         for pdf_path in VECTOR_PDF_PATHS:
+            mock_enqueue.reset_mock()
             pdf_name = os.path.basename(pdf_path)
-
             with open(pdf_path, "rb") as f:
-                response = client.post(
+                client.post(
                     "/api/v1/ingest",
                     data={"file": (f, pdf_name)},
-                    content_type="multipart/form-data"
+                    content_type="multipart/form-data",
                 )
-
-            if response.status_code == 200:
-                data = response.get_json()
-                results.append({
-                    "name": pdf_name,
-                    "wall_count": data["total_wall_count"],
-                    "linear_pts": data["total_linear_pts"],
-                })
-
-        # Verify we have results
-        assert len(results) == len(VECTOR_PDF_PATHS)
-
-        # Sort by wall count for analysis
-        results.sort(key=lambda x: x["wall_count"])
-
-        print(f"\nVector PDF Ingestion Results:")
-        print(f"{'PDF Name':<20} {'Walls':>6} {'Linear Pts':>12}")
-        print("-" * 45)
-        for r in results:
-            print(f"{r['name']:<20} {r['wall_count']:>6} {r['linear_pts']:>12.1f}")
-
-        # Basic sanity checks
-        min_walls = results[0]["wall_count"]
-        max_walls = results[-1]["wall_count"]
-        avg_walls = sum(r["wall_count"] for r in results) / len(results)
-
-        assert max_walls >= min_walls
-        assert avg_walls > 0
-
-        print(f"\nStatistics:")
-        print(f"  Min walls: {min_walls}")
-        print(f"  Max walls: {max_walls}")
-        print(f"  Avg walls: {avg_walls:.1f}")
+            mock_enqueue.assert_called_once_with(1)
 
 
 # =============================================================================
 # RASTER PDF INGESTION TESTS
 # =============================================================================
 
+
 @pytest.mark.skipif(not RASTER_PDF_PATHS, reason="No raster PDFs found")
 class TestRasterPDFIngestion:
-    """Ingestion tests using raster-based PDFs (processed via Gemini vision fallback)."""
+    """Ingestion API contract tests using raster-based PDFs.
 
-    @patch("app.services.raster_wall_extractor.genai.Client")
+    Like vector tests, these verify the async 202 contract only.
+    The Gemini vision fallback runs inside the worker, not the endpoint.
+    """
+
+    @patch("app.api.routes.enqueue_ingest_job")
+    @patch("app.api.routes.create_job")
     @pytest.mark.parametrize("pdf_path", RASTER_PDF_PATHS, ids=RASTER_PDF_NAMES)
-    def test_ingest_raster_floorplan_succeeds(self, mock_genai_client, client, pdf_path, monkeypatch):
-        """Raster PDFs are processed via Gemini fallback and return 200."""
-        from app.services.raster_wall_extractor import _RasterWallResult, _WallSegmentPx
-
-        monkeypatch.setattr(
-            "app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
-        )
-
-        mock_gemini = MagicMock()
-        mock_genai_client.return_value = mock_gemini
-        mock_response = MagicMock()
-        mock_response.parsed = _RasterWallResult(
-            walls=[
-                _WallSegmentPx(x1=0.0, y1=0.0, x2=400.0, y2=0.0, thickness_px=10.0),
-                _WallSegmentPx(x1=400.0, y1=0.0, x2=400.0, y2=600.0, thickness_px=10.0),
-            ]
-        )
-        mock_gemini.models.generate_content.return_value = mock_response
-
-        pdf_name = os.path.basename(pdf_path)
-        with open(pdf_path, "rb") as f:
-            response = client.post(
-                "/api/v1/ingest",
-                data={"file": (f, pdf_name)},
-                content_type="multipart/form-data",
-            )
-
-        assert response.status_code == 200, \
-            f"Raster PDF {pdf_name} should return 200 via fallback, got {response.status_code}: {response.get_json()}"
-
-        data = response.get_json()
-        assert "total_wall_count" in data
-        assert "wall_segments" in data
-        assert "source" in data
-        assert data["source"] == "raster"
-
-    def test_raster_pdf_no_api_key_returns_500(self, client, monkeypatch):
-        """Raster PDF without GOOGLE_API_KEY returns 500 (cannot process)."""
-        monkeypatch.setattr(
-            "app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", ""
-        )
-
-        if not RASTER_PDF_PATHS:
-            pytest.skip("No raster PDFs available")
-
-        pdf_path = RASTER_PDF_PATHS[0]
+    def test_ingest_raster_floorplan_returns_202(
+        self, mock_create_job, mock_enqueue, client, pdf_path
+    ):
+        """Each raster PDF upload receives a 202 with a job_id."""
+        mock_create_job.return_value = 5
         pdf_name = os.path.basename(pdf_path)
 
         with open(pdf_path, "rb") as f:
@@ -296,30 +224,23 @@ class TestRasterPDFIngestion:
                 content_type="multipart/form-data",
             )
 
-        assert response.status_code == 500
+        assert response.status_code == 202, (
+            f"Expected 202 for {pdf_name}, got {response.status_code}: {response.get_json()}"
+        )
         data = response.get_json()
-        assert "error" in data
+        assert "job_id" in data
+        assert data["status"] == "queued"
+        assert "status_url" in data
 
-    @patch("app.services.raster_wall_extractor.genai.Client")
-    def test_all_raster_pdfs_ingest_with_mocked_gemini(self, mock_genai_client, client, monkeypatch):
-        """All raster PDFs succeed when Gemini is mocked."""
-        from app.services.raster_wall_extractor import _RasterWallResult, _WallSegmentPx
-
-        monkeypatch.setattr(
-            "app.services.raster_wall_extractor.settings.GOOGLE_API_KEY", "test_key"
-        )
-
-        mock_gemini = MagicMock()
-        mock_genai_client.return_value = mock_gemini
-        mock_response = MagicMock()
-        mock_response.parsed = _RasterWallResult(
-            walls=[
-                _WallSegmentPx(x1=0.0, y1=0.0, x2=200.0, y2=0.0, thickness_px=8.0),
-            ]
-        )
-        mock_gemini.models.generate_content.return_value = mock_response
-
+    @patch("app.api.routes.enqueue_ingest_job")
+    @patch("app.api.routes.create_job")
+    def test_all_raster_pdfs_enqueue_successfully(
+        self, mock_create_job, mock_enqueue, client
+    ):
+        """All raster PDFs trigger a job enqueue without errors."""
+        mock_create_job.return_value = 5
         failed = []
+
         for pdf_path in RASTER_PDF_PATHS:
             pdf_name = os.path.basename(pdf_path)
             with open(pdf_path, "rb") as f:
@@ -328,24 +249,26 @@ class TestRasterPDFIngestion:
                     data={"file": (f, pdf_name)},
                     content_type="multipart/form-data",
                 )
-            if response.status_code != 200:
+            if response.status_code != 202:
                 failed.append((pdf_name, response.status_code, response.get_json()))
 
-        assert not failed, f"Raster PDFs that failed: {failed}"
+        assert not failed, f"Raster PDF(s) that failed to enqueue: {failed}"
 
 
 # =============================================================================
 # MIXED PDF BATCH TESTS
 # =============================================================================
 
+
 class TestMixedPDFBatch:
-    """Tests covering both vector and raster PDFs together."""
+    """Tests covering PDF discovery / categorisation (no API calls)."""
 
     def test_pdf_categorization_complete(self):
-        """Verify all PDFs are categorized."""
+        """Verify all discovered PDFs are categorized as vector or raster."""
         total = len(VECTOR_PDF_PATHS) + len(RASTER_PDF_PATHS)
-        assert total == len(ALL_PDF_PATHS), \
+        assert total == len(ALL_PDF_PATHS), (
             f"PDF categorization incomplete: {total} categorized vs {len(ALL_PDF_PATHS)} total"
+        )
 
     def test_at_least_one_vector_pdf(self):
         """Ensure we have at least one vector PDF for testing."""

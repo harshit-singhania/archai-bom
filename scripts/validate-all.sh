@@ -34,19 +34,19 @@ echo ""
 
 # ── Run workflow validator ────────────────────────────────────────────────────
 echo "▶ Running workflow validation..."
-"$script_dir/validate-workflows.sh"
+bash "$script_dir/validate-workflows.sh"
 if [ $? -ne 0 ]; then ((total_errors++)); fi
 echo ""
 
 # ── Run skill validator ───────────────────────────────────────────────────────
 echo "▶ Running skill validation..."
-"$script_dir/validate-skills.sh"
+bash "$script_dir/validate-skills.sh"
 if [ $? -ne 0 ]; then ((total_errors++)); fi
 echo ""
 
 # ── Run template validator ────────────────────────────────────────────────────
 echo "▶ Running template validation..."
-"$script_dir/validate-templates.sh"
+bash "$script_dir/validate-templates.sh"
 if [ $? -ne 0 ]; then ((total_errors++)); fi
 echo ""
 

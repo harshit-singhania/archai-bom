@@ -11,7 +11,15 @@ echo " GSD ► VALIDATING WORKFLOWS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-for file in .agent/workflows/*.md; do
+shopt -s nullglob
+workflow_files=(.agent/workflows/*.md)
+shopt -u nullglob
+
+if [ ${#workflow_files[@]} -eq 0 ]; then
+    echo "ℹ️  No workflow files found in .agent/workflows/ (skipping)"
+fi
+
+for file in "${workflow_files[@]}"; do
     ((workflows_checked++))
     filename=$(basename "$file")
     has_errors=false
