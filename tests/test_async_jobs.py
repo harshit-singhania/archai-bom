@@ -362,7 +362,9 @@ class TestAPIEnqueueAndPoll:
         }
 
         # Patch enqueue_ingest_job to return a fake job_id without real Redis
-        with patch("app.api.routes.enqueue_ingest_job", return_value=1) as mock_enqueue:
+        with patch(
+            "app.api.ingest_service.enqueue_ingest_job", return_value=1
+        ) as mock_enqueue:
             response = client.post(
                 "/api/v1/ingest",
                 data={"file": (pdf_io, "test.pdf")},
@@ -433,7 +435,9 @@ class TestAPIEnqueueAndPoll:
             "prompt": "Open plan living room",
         }
 
-        with patch("app.api.routes.enqueue_generate_job", return_value=42) as mock_gen:
+        with patch(
+            "app.api.generate_service.enqueue_generate_job", return_value=42
+        ) as mock_gen:
             response = client.post("/api/v1/generate", json=payload)
 
         assert response.status_code == 202

@@ -75,8 +75,8 @@ def test_api_ingest_endpoint_invalid_file(client):
     assert "must be a PDF" in response.get_json()["error"]
 
 
-@patch("app.api.routes.enqueue_ingest_job")
-@patch("app.api.routes.create_job", return_value=99)
+@patch("app.api.ingest_service.enqueue_ingest_job")
+@patch("app.api.ingest_service.create_job", return_value=99)
 def test_api_ingest_endpoint_returns_202(mock_create_job, mock_enqueue, client):
     """Valid PDF upload enqueues a job and returns the 202 async contract."""
     pdf_path = "sample_pdfs/vector/test_floorplan.pdf"
@@ -118,8 +118,8 @@ class TestVectorPDFIngestion:
     and verify the async response shape only.
     """
 
-    @patch("app.api.routes.enqueue_ingest_job")
-    @patch("app.api.routes.create_job")
+    @patch("app.api.ingest_service.enqueue_ingest_job")
+    @patch("app.api.ingest_service.create_job")
     @pytest.mark.parametrize("pdf_path", VECTOR_PDF_PATHS, ids=VECTOR_PDF_NAMES)
     def test_ingest_vector_floorplan_returns_202(
         self, mock_create_job, mock_enqueue, client, pdf_path
@@ -144,8 +144,8 @@ class TestVectorPDFIngestion:
         assert "status_url" in data
         assert data["status_url"] == f"/api/v1/jobs/{data['job_id']}"
 
-    @patch("app.api.routes.enqueue_ingest_job")
-    @patch("app.api.routes.create_job")
+    @patch("app.api.ingest_service.enqueue_ingest_job")
+    @patch("app.api.ingest_service.create_job")
     def test_all_vector_floorplans_enqueue_successfully(
         self, mock_create_job, mock_enqueue, client
     ):
@@ -174,8 +174,8 @@ class TestVectorPDFIngestion:
             + "\n".join(f"  {n}: {c} — {m}" for n, c, m in failed_pdfs)
         )
 
-    @patch("app.api.routes.enqueue_ingest_job")
-    @patch("app.api.routes.create_job")
+    @patch("app.api.ingest_service.enqueue_ingest_job")
+    @patch("app.api.ingest_service.create_job")
     def test_vector_ingest_enqueue_called_per_pdf(
         self, mock_create_job, mock_enqueue, client
     ):
@@ -207,8 +207,8 @@ class TestRasterPDFIngestion:
     The Gemini vision fallback runs inside the worker, not the endpoint.
     """
 
-    @patch("app.api.routes.enqueue_ingest_job")
-    @patch("app.api.routes.create_job")
+    @patch("app.api.ingest_service.enqueue_ingest_job")
+    @patch("app.api.ingest_service.create_job")
     @pytest.mark.parametrize("pdf_path", RASTER_PDF_PATHS, ids=RASTER_PDF_NAMES)
     def test_ingest_raster_floorplan_returns_202(
         self, mock_create_job, mock_enqueue, client, pdf_path
@@ -232,8 +232,8 @@ class TestRasterPDFIngestion:
         assert data["status"] == "queued"
         assert "status_url" in data
 
-    @patch("app.api.routes.enqueue_ingest_job")
-    @patch("app.api.routes.create_job")
+    @patch("app.api.ingest_service.enqueue_ingest_job")
+    @patch("app.api.ingest_service.create_job")
     def test_all_raster_pdfs_enqueue_successfully(
         self, mock_create_job, mock_enqueue, client
     ):
