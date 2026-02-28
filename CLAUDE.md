@@ -56,10 +56,14 @@ pytest -x                         # Stop on first failure
 
 ## 5. Code Style & Architecture
 
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full coding standards, commit message format, and PR guidelines. Key rules:
+
 - **Format:** 100 char lines, 4 spaces, double quotes.
+- **Functions:** Max **50 LOC**, max **1 nested loop**, max **5 parameters**.
 - **Imports:** 3 sections (stdlib, third-party, local).
 - **Type Hints:** Strictly required. Use `list[str]`, `T | None`.
 - **Naming:** `snake_case` functions/vars, `PascalCase` classes.
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) — `type(scope): description`.
 
 ### Pydantic & SQLModel
 - Heavy use of `Field(description="...")`.
